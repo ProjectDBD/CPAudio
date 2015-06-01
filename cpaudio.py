@@ -18,22 +18,38 @@ def setup():
       description='Interact with the platform\'s audio hardware'  \
                             )
 
-  parser.add_argument (           \
-    '-l',                         \
-    '--list-devices',             \
-    action='store_true',          \
-    dest='list_devices',          \
-    help='List all audio devices' \
+  parser.add_argument (               \
+    '-l',                             \
+    '--list-devices',                 \
+    action  = 'store_true',           \
+    dest    = 'list_devices',         \
+    help    = 'List all audio devices'\
+                      )
+
+  parser.add_argument (                     \
+    '-li',                                  \
+    '--input-devices',                      \
+    action  = 'store_true',                 \
+    dest    = 'list_input',                 \
+    help    ='List all input audio devices' \
+                      )
+
+  parser.add_argument (                     \
+    '-lo',                                  \
+    '--output-devices',                     \
+    action  = 'store_true',                 \
+    dest    = 'list_output',                \
+    help    ='List all output audio devices'\
                       )
 
   parser.add_argument (                                                 \
     '-v',                                                               \
     '--verbosity',                                                      \
     choices = [ 'trace', 'debug', 'info', 'warning', 'error', 'none' ], \
-    action = 'store',                                                   \
+    action  = 'store',                                                  \
     default = 'error',                                                  \
-    dest = 'verbosity',                                                 \
-    help = 'Verbosity level'                                            \
+    dest    = 'verbosity',                                              \
+    help    = 'Verbosity level'                                         \
                       )
 
   args = parser.parse_args()
@@ -170,21 +186,58 @@ def print_device( device ):
           stream_index                  \
                                       )
 
-setup()
-
-initialize_debug_info()
-
-if( args.list_devices ):
+def list_devices( filter ):
   device_list = cahal_get_device_list()
   index       = 0                                                             
   device      = cahal_device_list_get( device_list, index )       
-                                                                               
+                                                                                
   while( device ):
-    print_device( device )
+    valid_device = False
 
+    if( filter != -1 ):
+      if( device.device_streams ):
+        stream_index  = 0                                                             
+        stream        =                   \
+          cahal_device_stream_list_get  ( \
+            device.device_streams,        \
+            stream_index                  \
+                                        )
+
+        while( stream ):
+          if( stream.direction == filter ):
+            valid_device = True
+
+            break
+
+          stream_index += 1
+          stream        =                   \
+            cahal_device_stream_list_get  ( \
+              device.device_streams,        \
+              stream_index                  \
+                                          )
+    else:
+      valid_device = True
+
+    if( valid_device ):
+      print_device( device )
+  
     index   += 1                                                              
     device  = cahal_device_list_get( device_list, index )
-else:
-  parser.print_help()
 
-terminate()
+def main():
+  setup()
+
+  initialize_debug_info()
+
+  if( args.list_devices ):
+    list_devices( -1 )
+  elif( args.list_input ):
+    list_devices( CAHAL_DEVICE_INPUT_STREAM )
+  elif( args.list_output ):
+    list_devices( CAHAL_DEVICE_OUTPUT_STREAM )
+  else:
+    parser.print_help()
+
+  terminate()
+
+main()
