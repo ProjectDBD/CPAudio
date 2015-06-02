@@ -37,40 +37,39 @@ class WAVPlayer:
   def play( self, device, duration ):
     self.openWAVFile()
 
-    if  (                                 \
-      device.hasAppropriateStream (       \
-        CAHAL_DEVICE_OUTPUT_STREAM,       \
-        WAVPlayer.wavFile.getnchannels(),      \
-        WAVPlayer.wavFile.getsampwidth() * 8,  \
-        WAVPlayer.wavFile.getframerate()       \
-                                  )       \
+    if  (                                         \
+      not device.hasAppropriateStream (           \
+            CAHAL_DEVICE_OUTPUT_STREAM,           \
+            WAVPlayer.wavFile.getnchannels(),     \
+            WAVPlayer.wavFile.getsampwidth() * 8, \
+            WAVPlayer.wavFile.getframerate()      \
+                                      )           \
         ):
+      print "WARNING: Could not find an appropriate stream."
 
-      flags =                                   \
-        CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
-        | CAHAL_AUDIO_FORMAT_FLAGISPACKED                                                                                
+    flags =                                   \
+      CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
+      | CAHAL_AUDIO_FORMAT_FLAGISPACKED                                                                                
 
-      if( WAVPlayer.wavFile ):
-        if  (
-          start_playback  (                   \
-            device.struct,                    \
-            CAHAL_AUDIO_FORMAT_LINEARPCM,     \
-            self.wavFile.getnchannels(),      \
-            self.wavFile.getframerate(),      \
-            self.wavFile.getsampwidth() * 8,  \
-            playback,                         \
-            flags                             \
-                          )                   \
-            ):
-          cahal_sleep( duration )
-        
-          cahal_stop_playback()
-        else:
-          print "ERROR: Could not start playing."
+    if( WAVPlayer.wavFile ):
+      if  (
+        start_playback  (                   \
+          device.struct,                    \
+          CAHAL_AUDIO_FORMAT_LINEARPCM,     \
+          self.wavFile.getnchannels(),      \
+          self.wavFile.getframerate(),      \
+          self.wavFile.getsampwidth() * 8,  \
+          playback,                         \
+          flags                             \
+                        )                   \
+          ):
+        cahal_sleep( duration )
+      
+        cahal_stop_playback()
       else:
-        print "ERROR: Could not open WAV file."
+        print "ERROR: Could not start playing."
     else:
-      print "ERROR: Could not find an appropriate stream."
+      print "ERROR: Could not open WAV file."
 
   def closeWAVFile( self ):
     WAVPlayer.wavFile.close()

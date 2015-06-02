@@ -17,46 +17,46 @@ class WAVRecorder:
     self.sampleRate       = sampleRate
 
   def record( self, device, duration, outputFileName ):
-    if  (                           \
-      device.hasAppropriateStream ( \
-        CAHAL_DEVICE_INPUT_STREAM,  \
-        self.numberOfChannels,      \
-        self.bitDepth,              \
-        self.sampleRate             \
-                                  ) \
+    if  (                               \
+      not device.hasAppropriateStream ( \
+            CAHAL_DEVICE_INPUT_STREAM,  \
+            self.numberOfChannels,      \
+            self.bitDepth,              \
+            self.sampleRate             \
+                                      ) \
         ):
-      try:
-        WAVRecorder.wavFile = wave.open( outputFileName, "wb" )
+        print "WARNING: Could not find an appropriate stream."
+
+    try:
+      WAVRecorder.wavFile = wave.open( outputFileName, "wb" )
         
-        WAVRecorder.wavFile.setnchannels( self.numberOfChannels )
-        WAVRecorder.wavFile.setsampwidth( self.bitDepth / 8 )
-        WAVRecorder.wavFile.setframerate( self.sampleRate )
+      WAVRecorder.wavFile.setnchannels( self.numberOfChannels )
+      WAVRecorder.wavFile.setsampwidth( self.bitDepth / 8 )
+      WAVRecorder.wavFile.setframerate( self.sampleRate )
 
-        flags =                                   \
-          CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
-          | CAHAL_AUDIO_FORMAT_FLAGISPACKED                                                                                
+      flags =                                   \
+        CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
+        | CAHAL_AUDIO_FORMAT_FLAGISPACKED                                                                                
 
-        if  (
-          start_recording (               \
-            device.struct,                \
-            CAHAL_AUDIO_FORMAT_LINEARPCM, \
-            self.numberOfChannels,        \
-            self.sampleRate,              \
-            self.bitDepth,                \
-            bufferSamples,                \
-            flags                         \
-                          )               \
-            ):
-          cahal_sleep( duration )
+      if  (
+        start_recording (               \
+          device.struct,                \
+          CAHAL_AUDIO_FORMAT_LINEARPCM, \
+          self.numberOfChannels,        \
+          self.sampleRate,              \
+          self.bitDepth,                \
+          bufferSamples,                \
+          flags                         \
+                        )               \
+          ):
+        cahal_sleep( duration )
 
-          cahal_stop_recording()
-        else:
-          print "ERROR: Could not start recording."
+        cahal_stop_recording()
+      else:
+        print "ERROR: Could not start recording."
 
-        WAVRecorder.wavFile.close()
+      WAVRecorder.wavFile.close()
 
-        WAVRecorder.wavFile = None
-      except wave.Error:
-        print "ERROR: Error while creating WAV file."
-    else:
-      print "ERROR: Could not find an appropriate stream."
+      WAVRecorder.wavFile = None
+    except wave.Error:
+      print "ERROR: Error while creating WAV file."
