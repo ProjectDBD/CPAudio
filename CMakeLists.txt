@@ -119,6 +119,12 @@ swig_add_module (
 swig_link_libraries( ${PROJECT_NAME} ${PYTHON_LIBRARIES} cpcommon cahal csignal )
 
 set( SCRIPTS "${PROJECT_SOURCE_DIR}/cpaudio.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/CAHALAudioFormatDescription.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/CAHALDevice.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/CAHALDeviceStream.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/WAVPlayer.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/CAHALSampleRateRange.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/WAVRecorder.py" )
 
 set( WRAPPERS "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.py" )
 

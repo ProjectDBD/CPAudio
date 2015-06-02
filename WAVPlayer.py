@@ -46,20 +46,27 @@ class WAVPlayer:
                                   )       \
         ):
 
+      flags =                                   \
+        CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
+        | CAHAL_AUDIO_FORMAT_FLAGISPACKED                                                                                
+
       if( WAVPlayer.wavFile ):
-        start_playback  (                   \
-          device.struct,                    \
-          CAHAL_AUDIO_FORMAT_LINEARPCM,     \
-          self.wavFile.getnchannels(),      \
-          self.wavFile.getframerate(),      \
-          self.wavFile.getsampwidth() * 8,  \
-          playback,                         \
-          0                                 \
-                        )                   \
-                                                                                        
-        cahal_sleep( duration )
+        if  (
+          start_playback  (                   \
+            device.struct,                    \
+            CAHAL_AUDIO_FORMAT_LINEARPCM,     \
+            self.wavFile.getnchannels(),      \
+            self.wavFile.getframerate(),      \
+            self.wavFile.getsampwidth() * 8,  \
+            playback,                         \
+            flags                             \
+                          )                   \
+            ):
+          cahal_sleep( duration )
         
-        cahal_stop_playback()
+          cahal_stop_playback()
+        else:
+          print "ERROR: Could not start playing."
       else:
         print "ERROR: Could not open WAV file."
     else:

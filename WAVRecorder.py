@@ -32,19 +32,26 @@ class WAVRecorder:
         WAVRecorder.wavFile.setsampwidth( self.bitDepth / 8 )
         WAVRecorder.wavFile.setframerate( self.sampleRate )
 
-        start_recording (               \
-          device.struct,                \
-          CAHAL_AUDIO_FORMAT_LINEARPCM, \
-          self.numberOfChannels,        \
-          self.sampleRate,              \
-          self.bitDepth,                \
-          bufferSamples,                \
-          0                             \
-                        )
-                                                                                    
-        cahal_sleep( duration )
+        flags =                                   \
+          CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
+          | CAHAL_AUDIO_FORMAT_FLAGISPACKED                                                                                
 
-        cahal_stop_recording()
+        if  (
+          start_recording (               \
+            device.struct,                \
+            CAHAL_AUDIO_FORMAT_LINEARPCM, \
+            self.numberOfChannels,        \
+            self.sampleRate,              \
+            self.bitDepth,                \
+            bufferSamples,                \
+            flags                         \
+                          )               \
+            ):
+          cahal_sleep( duration )
+
+          cahal_stop_recording()
+        else:
+          print "ERROR: Could not start recording."
 
         WAVRecorder.wavFile.close()
 
