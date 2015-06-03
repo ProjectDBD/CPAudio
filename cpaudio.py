@@ -219,7 +219,7 @@ def showDeviceDetails():
 
 def playback():
   if( args.deviceName and args.playbackFile ):
-    print "Recording info:"
+    print "Playback info:"
     print "\tDevice:\t\t%s" %( args.deviceName )
     print "\tFile:\t\t%s" %( args.playbackFile )
     print "\tDuration:\t%d" %( args.duration )
