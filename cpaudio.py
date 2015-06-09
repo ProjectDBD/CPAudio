@@ -4,6 +4,7 @@ from cpaudio_lib import *
 from CAHALDevice import CAHALDevice
 from WAVRecorder import WAVRecorder
 from WAVPlayer import WAVPlayer
+from Transmitter import Transmitter
 
 parser  = None
 args    = None
@@ -68,6 +69,22 @@ def setup():
     help    = 'Audio file to playback. Required by playback.' \
                       )
 
+  parser.add_argument (
+    '-t',
+    '--transmit',
+    action  = 'store_true',
+    dest    = 'transmit',
+    help    = 'Transmit a message using audio signals.'
+                      )
+
+  parser.add_argument (
+    '-m',
+    '--message',
+    action  = 'store',
+    dest    = 'message',
+    help    = 'The message to transmit. Required for transmit.'
+                      )
+
   parser.add_argument (               \
     '-r',                             \
     '--record',                       \
@@ -111,9 +128,38 @@ def setup():
     default = 16,         \
     type    = int,        \
     dest    = 'bitDepth', \
-    help    = 'The number of bits per sample to record at. Required for record.'  \
+    help    = 'The number of bits per sample represented in the format (i.e., quantization level). Required for record.'  \
                       )
 
+  parser.add_argument (
+    '-bps',
+    '--bitsPerSymbol',
+    action  = 'store',
+    default = 1,
+    type    = int,
+    dest    = 'bitsPerSymbol',
+    help    = 'The number of bits per symbol. Constellation size is 2^bitsPerSymbol'
+                      ) 
+
+  parser.add_argument (
+    '-sps',
+    '--samplesPerSymbol',
+    action  = 'store',
+    default = 100,
+    type    = int,
+    dest    = 'samplesPerSymbol',
+    help    = 'The number of samples per symbol.'
+                      )
+
+  parser.add_argument (
+    '-c',
+    '--carrierFrequency',
+    action  = 'store',
+    default = 8000.0,
+    type    = float,
+    dest    = 'carrierFrequency',
+    help    = 'The carrier frequency used to modulate symbols'
+                      )
 
   parser.add_argument (     \
     '-s',                   \
@@ -238,6 +284,43 @@ def playback():
   else:
     print "ERROR: Device name and input file must be set for playback."
 
+def transmit():
+  if( args.message and args.deviceName ):
+    print "Transmit info:"
+    print "\tMessage:\t\t'%s'" %( args.message )
+    print "\tDevice:\t\t\t%s" %( args.deviceName )
+    print "\nFormat info:"
+    print "\tBit depth:\t\t%d" %( args.bitDepth )
+    print "\tNumber of channels:\t%d" %( args.numberOfChannels )
+    print "\tSample rate:\t\t%.02f" %( args.sampleRate )
+    print "\nModulation info:"
+    print "\tBits per symbol:\t%d" %( args.bitsPerSymbol )
+    print "\tSamples per symbol:\t%d" %( args.samplesPerSymbol )
+    print "\tCarrier frequency:\t%.02f" %( args.carrierFrequency )
+
+    device = findDevice( args.deviceName )
+
+    if( device ):
+      if( device.doesSupportPlayback() ):
+        transmitter = \
+          Transmitter (
+            args.bitDepth,
+            args.numberOfChannels,
+            args.sampleRate,
+            args.bitsPerSymbol,
+            args.samplesPerSymbol,
+            args.carrierFrequency
+                      )
+
+        transmitter.transmit( device, args.message )
+      else:
+        print "ERROR: Device %s does not support playback." \
+          %( args.deviceName )
+    else:
+      print "ERROR: Could not find device %s." %( args.deviceName )
+  else:
+    print "ERROR: Message and device name must be set for transmit."
+
 def record():
   if( args.deviceName ):
     print "Recording info:"
@@ -287,6 +370,8 @@ def main():
     record()
   elif( args.playback ):
     playback()
+  elif( args.transmit ):
+    transmit()
   else:
     parser.print_help()
 

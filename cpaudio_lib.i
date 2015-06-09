@@ -58,6 +58,14 @@
 %include <log_definitions.h>
 %include <log_functions.h>
 
+%include <csignal.h>
+%include <wav.h>
+%include <spreading_code.h>
+%include <gold_code.h>
+%include <csignal_error_codes.h>
+%include <fir_filter.h>
+%include <kaiser_filter.h>
+
 %include <cpointer.i>
 %pointer_functions( double, doubleP )
 
