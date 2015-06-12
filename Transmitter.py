@@ -1,6 +1,35 @@
 from cpaudio_lib import *
 
+from BitStream import BitStream
+from BitPacker import BitPacker
+
+import socket
+import struct
+import math
+
+def playback( in_device, in_buffer_length ):                                    
+  data = ''
+
+  if( Transmitter.signal ):
+    ( numberOfBits, buffer ) = \
+      python_bit_stream_get_bits  (
+        Transmitter.signal.stream,
+        in_buffer_length * 8  
+                                  )
+
+    if( 0 < numberOfBits ):
+      print "Buffer is of length 0x%x, requested 0x%x bytes." \
+        %( len( buffer ), in_buffer_length )
+  
+      data = buffer
+  else:
+    print "ERROR: Signal is not initialized!"
+
+  return( data )
+
 class Transmitter:
+  signal = None
+
   def __init__  (
     self, bitDepth, numberOfChannels, sampleRate, bitsPerSymbol,
     samplesPerSymbol, carrierFrequency
@@ -12,6 +41,8 @@ class Transmitter:
     self.bitsPerSymbol    = bitsPerSymbol
     self.samplesPerSymbol = samplesPerSymbol
     self.carrierFrequency = carrierFrequency
+
+    self.signal = None
 
   def transmit( self, device, message ):
     if  (                               \
@@ -33,17 +64,19 @@ class Transmitter:
     else:
       print "ERROR: Could not find an appropriate stream."
 
-  def readSamples( self, in_device, in_buffer_length ):                                    
-    print "Reading samples."
-
-    print self.signal
-
   def sendSignal( self, device, signal ):
     flags =                                   \
       CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
       | CAHAL_AUDIO_FORMAT_FLAGISPACKED
 
-    self.signal = signal
+    Transmitter.signal = BitStream( signal )
+
+    frameSize       = self.numberOfChannels * self.bitDepth / 8
+    bytesPerSecond  = self.sampleRate * frameSize
+    duration        = \
+      math.ceil( Transmitter.signal.stream.data_length / bytesPerSecond )
+
+    print "Duration is %d seconds." %( duration )
 
     if  (
       start_playback  (               \
@@ -52,31 +85,35 @@ class Transmitter:
         self.numberOfChannels,        \
         self.sampleRate,              \
         self.bitDepth,                \
-        self.readSamples,             \
+        playback,                     \
         flags                         \
                       )               \
         ):
-      print "Starting transmit..."
 
-      #cahal_sleep( duration )
+      duration = struct.unpack( "I", struct.pack( "i", duration ) )[ 0 ]
+
+      print "Transmit for %d second(s)..." %( duration )
+
+      cahal_sleep( duration )
     
-      cahal_stop_playback()
-
-      print "Stopping transmit..."
+      if( cahal_stop_playback() ):
+        print "Stopping transmit..."
+      else:
+        print "ERROR: Could not stop playback."
     else:
       print "ERROR: Could not start playing."
 
-    del self.signal
+    Transmitter.signal = None
 
   def prepareSignal( self, message ):
     constellationSize = 2 ** self.bitsPerSymbol
-    symbolTracker     = python_initialize_symbol_tracker( message )
-    symbol            = \
-      python_get_symbol( symbolTracker, self.bitsPerSymbol ) 
     basebandAmplitude = 2 ** ( self.bitDepth - 1 ) - 1
 
-    signal = [ [] for index in range( self.numberOfChannels ) ]
+    symbolTracker     = BitStream( message )
+    signal            = BitPacker()
   
+    symbol = symbolTracker.read( self.bitsPerSymbol )
+
     while( symbol != None ):
       signalComponents = python_modulate_symbol (
         symbol,
@@ -87,21 +124,22 @@ class Transmitter:
         self.carrierFrequency
                                                 )
 
-      signalPart = []
-
       for index in range( self.samplesPerSymbol ):
-        signalPart.append (
+        sampleValue = \
           int (
             signalComponents[ 0 ][ index ]
             - signalComponents[ 1 ][ index ]
               )
-                          )
 
-      for index in range( self.numberOfChannels ):
-        signal[ index ] = signal[ index ] + signalPart
+        sampleValue = struct.pack( "i", sampleValue )
+        sampleValue = struct.unpack( "I", sampleValue )[ 0 ]
+        sampleValue = socket.htonl( sampleValue )
 
-      symbol = python_get_symbol( symbolTracker, self.bitsPerSymbol ) 
+        signal.writeInt( sampleValue, self.bitDepth )
 
-    csignal_destroy_symbol_tracker( symbolTracker )
+        for _ in range( self.numberOfChannels - 1 ):
+          signal.writeInt( 0, self.bitDepth )
+
+      symbol = symbolTracker.read( self.bitsPerSymbol )
 
     return( signal )

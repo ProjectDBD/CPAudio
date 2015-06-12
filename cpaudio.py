@@ -16,6 +16,7 @@ def setup():
   global devices
 
   cahal_initialize()
+  csignal_initialize()
 
   parser = \
     argparse.ArgumentParser (

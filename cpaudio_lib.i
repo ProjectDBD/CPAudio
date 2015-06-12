@@ -24,7 +24,8 @@
 %apply unsigned int       { UINT32  }
 %apply unsigned long long { UINT64  }
 
-%apply size_t { SIZE  }
+%apply unsigned int { USIZE }
+%apply int          { SIZE  }
 
 %apply char *       { CHAR *  }
 %apply char *       { INT8 *  }
@@ -65,6 +66,8 @@
 %include <csignal_error_codes.h>
 %include <fir_filter.h>
 %include <kaiser_filter.h>
+%include <bit_packer.h>
+%include <bit_stream.h>
 
 %include <cpointer.i>
 %pointer_functions( double, doubleP )

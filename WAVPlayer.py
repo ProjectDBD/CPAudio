@@ -1,4 +1,5 @@
 import wave
+import math
 
 from cpaudio_lib import *
 
@@ -32,7 +33,10 @@ class WAVPlayer:
       print "\tSample bit depth:\t", WAVPlayer.wavFile.getsampwidth() * 8
       print "\tSample rate:\t\t", WAVPlayer.wavFile.getframerate()
       print "\tDuration:\t\t",  \
-        WAVPlayer.wavFile.getnframes() / WAVPlayer.wavFile.getframerate()
+        math.ceil (
+          ( WAVPlayer.wavFile.getnframes() * 1.0 )
+          / ( WAVPlayer.wavFile.getframerate() * 1.0 )
+                  )
     except wave.Error:
       print "ERROR: Could not open %s for read." %( self.fileName )
 
@@ -77,7 +81,10 @@ class WAVPlayer:
     else:
       print "ERROR: Could not find an appropriate stream."
 
+    self.closeWAVFile()
+
   def closeWAVFile( self ):
-    WAVPlayer.wavFile.close()
+    if( WAVPlayer.wavFile ):
+      WAVPlayer.wavFile.close()
 
     WAVPlayer.wavFile = None
