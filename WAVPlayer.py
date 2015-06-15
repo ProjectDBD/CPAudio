@@ -69,11 +69,13 @@ class WAVPlayer:
             ):
           print "Starting playback..."
 
-          cahal_sleep( duration )
-        
-          cahal_stop_playback()
+          python_cahal_sleep( duration )
 
           print "Stopping playback..."
+        
+          python_cahal_stop_playback()
+
+          print "Stopped playback."
         else:
           print "ERROR: Could not start playing."
       else:

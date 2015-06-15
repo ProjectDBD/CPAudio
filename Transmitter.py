@@ -94,10 +94,12 @@ class Transmitter:
 
       print "Transmit for %d second(s)..." %( duration )
 
-      cahal_sleep( duration )
+      python_cahal_sleep( duration )
     
-      if( cahal_stop_playback() ):
-        print "Stopping transmit..."
+      print "Stopping transmit..."
+
+      if( python_cahal_stop_playback() ):
+        print "Transmit stopped."
       else:
         print "ERROR: Could not stop playback."
     else:

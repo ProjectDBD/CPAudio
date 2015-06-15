@@ -1,3 +1,8 @@
+try:
+  import threading as _threading
+except ImportError:
+  import dummy_threading as _threading
+
 import argparse
 
 from cpaudio_lib import *
@@ -15,7 +20,7 @@ def setup():
   global args 
   global devices
 
-  cahal_initialize()
+  python_cahal_initialize()
   csignal_initialize()
 
   parser = \
@@ -343,6 +348,8 @@ def record():
     if( device and recorder ):
       if( device.doesSupportRecording() ):
         recorder.record( device, args.duration, args.outputFileName )
+
+        print "Done recording."
       else:
         print "ERROR: Device '%s' does not support recording."  \
           %( args.deviceName )

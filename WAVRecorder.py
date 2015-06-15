@@ -3,10 +3,14 @@ import wave
 from cpaudio_lib import *
 
 def bufferSamples( in_device, in_buffer, in_buffer_length ):                         
+  print "Recording..."
+
   if( WAVRecorder.wavFile ):
     WAVRecorder.wavFile.writeframes( in_buffer )
   else:
     print "ERROR: WAV file handler is not initialized!"
+
+  print "Done..."
 
 class WAVRecorder:
   wavFile = None
@@ -49,11 +53,13 @@ class WAVRecorder:
             ):
           print "Starting recording..."
 
-          cahal_sleep( duration )
-
-          cahal_stop_recording()
+          python_cahal_sleep( duration )
 
           print "Stopping recording..."
+
+          python_cahal_stop_recording()
+
+          print "Stopped recording."
         else:
           print "ERROR: Could not start recording."
   
