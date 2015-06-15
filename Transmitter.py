@@ -137,6 +137,10 @@ class Transmitter:
         sampleValue = struct.unpack( "I", sampleValue )[ 0 ]
         sampleValue = socket.htonl( sampleValue )
 
+        if( 0 > sampleValue ):
+          sampleValue = struct.pack( "i", sampleValue )
+          sampleValue = struct.unpack( "I", sampleValue )[ 0 ]
+
         signal.writeInt( sampleValue, self.bitDepth )
 
         for _ in range( self.numberOfChannels - 1 ):
