@@ -36,3 +36,5 @@ class BitStream:
 
     return( returnValue )
 
+  def getSize( self ):
+    return( bit_stream_get_number_of_remaining_bits( self.stream ) )

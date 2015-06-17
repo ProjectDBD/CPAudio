@@ -200,6 +200,7 @@ def setup():
 
 def terminate():
   cahal_terminate()
+  csignal_terminate()
 
 def initialize_debug_info():
   global args
