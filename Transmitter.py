@@ -14,6 +14,7 @@ import sys
 import socket
 import struct
 import math
+import wave
 
 def playback( in_device, in_buffer_length ):                                    
   data = ''
@@ -43,7 +44,7 @@ class Transmitter:
 
   def __init__  (
     self, bitDepth, numberOfChannels, sampleRate, bitsPerSymbol,
-    samplesPerSymbol, carrierFrequency
+    samplesPerSymbol, carrierFrequency, outputFileName
                 ):
 
     self.bitDepth         = bitDepth
@@ -55,6 +56,17 @@ class Transmitter:
 
     self.constellationSize  = 2 ** self.bitsPerSymbol
     self.basebandAmplitude  = 2 ** ( self.bitDepth - 1 ) - 1
+
+    self.outputFileName = outputFileName
+
+    self.configureWAVWriter()
+
+  def configureWAVWriter( self ):
+    self.wavWriter = wave.open( self.outputFileName, "wb" )
+        
+    self.wavWriter.setnchannels( self.numberOfChannels )
+    self.wavWriter.setsampwidth( self.bitDepth / 8 )
+    self.wavWriter.setframerate( self.sampleRate )
 
   def transmit( self, device, message ):
     if  (                               \
@@ -147,7 +159,6 @@ class Transmitter:
     else:
       print "ERROR: Could not start playing."
 
-    Transmitter.signal  = None
     Transmitter.lock    = None
 
   def bufferSymbols( self, symbolTracker, bitPacker, numberOfSymbols ):
@@ -197,3 +208,15 @@ class Transmitter:
       return( False )
     else:
       return( True )
+
+  def __del__( self ):
+    if( self.wavWriter ):
+      if( Transmitter.signal ):
+        data = Transmitter.signal.getRawBytes()
+
+        if( 0 < len( data ) ):
+          self.wavWriter.writeframes( data )
+
+      self.wavWriter.close()
+
+    Transmitter.signal  = None

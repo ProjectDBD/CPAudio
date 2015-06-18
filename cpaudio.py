@@ -9,6 +9,9 @@ from cpaudio_lib import *
 from CAHALDevice import CAHALDevice
 from WAVRecorder import WAVRecorder
 from WAVPlayer import WAVPlayer
+
+from SpreadSpectrumTransmitter import SpreadSpectrumTransmitter
+from FilterTransmitter import FilterTransmitter
 from Transmitter import Transmitter
 
 parser  = None
@@ -167,6 +170,75 @@ def setup():
     help    = 'The carrier frequency used to modulate symbols'
                       )
 
+  parser.add_argument (
+    '-ft',
+    '--filterTransmit',
+    action  = 'store_true',
+    dest    = 'filterTransmit',
+    help    = 'Transmit a message using filtered audio signals.'
+                      )
+
+  parser.add_argument (
+    '-fsb',
+    '--firstStopBand',
+    action  = 'store',
+    default = 6000.0,
+    type    = float,
+    dest    = 'firstStopBand',
+    help    = 'Frequencies under this frequency should be attenuated.'
+                      )
+
+  parser.add_argument (
+    '-fpb',
+    '--firstPassBand',
+    action  = 'store',
+    default = 7000.0,
+    type    = float,
+    dest    = 'firstPassBand',
+    help    = 'Frequencies between this band and secondPassBand should be passed through without attenuation.'
+                      )
+
+
+  parser.add_argument (
+    '-spb',
+    '--secondPassBand',
+    action  = 'store',
+    default = 9000.0,
+    type    = float,
+    dest    = 'secondPassBand',
+    help    = 'Frequencies between this band and firstPassBand should be passed through without attenuation.'
+                      )
+
+  parser.add_argument (
+    '-ssb',
+    '--secondStopBand',
+    action  = 'store',
+    default = 10000.0,
+    type    = float,
+    dest    = 'secondStopBand',
+    help    = 'Frequecies above this frequency should be attenuated.'
+                      )
+
+  parser.add_argument (
+    '-pa',
+    '--passBandAttenuation',
+    action  = 'store',
+    default = 0.1,
+    type    = float,
+    dest    = 'passBandAttenuation',
+    help    = 'The allowable attenuation in the passband (amount of ripple)'
+                      )
+
+  parser.add_argument (
+    '-sa',
+    '--stopBandAttenuation',
+    action  = 'store',
+    default = 80.0,
+    type    = float,
+    dest    = 'stopBandAttenuation',
+    help    = 'The amount to attenuate frequencies in the stopband by.'
+                      )
+
   parser.add_argument (     \
     '-s',                   \
     '--sampleRate',         \
@@ -194,6 +266,75 @@ def setup():
     default = 'error',                                                  \
     dest    = 'verbosity',                                              \
     help    = 'Verbosity level'                                         \
+                      )
+
+  parser.add_argument (
+    '-pd',
+    '--polynomialDegree',
+    action  = 'store',
+    default = 7,
+    type    = int,
+    dest    = 'polynomialDegree',
+    help    = 'The degree of the spreading code generator polynomial.'
+                      )
+ 
+  parser.add_argument (
+    '-sst',
+    '--spreadSpectrumTransmit',
+    action  = 'store_true',
+    dest    = 'spreadSpectrumTransmit',
+    help    = 'Transmit a message using spread spectrum audio signals.'
+                      )
+
+  parser.add_argument (
+    '-fg',
+    '--firstGenerator',
+    action  = 'store',
+    default = 0x12000000,
+    type    = int,
+    dest    = 'firstGenerator',
+    help    = 'The first generator polynomial to use for gold code spreading.'
+                      )
+
+  parser.add_argument (
+    '-sg',
+    '--secondGenerator',
+    action  = 'store',
+    default = 0x1E000000,
+    type    = int,
+    dest    = 'secondGenerator',
+    help    = 'The second generator polynomial to use for gold code spreading.'
+                      )
+
+  parser.add_argument (
+    '-fiv',
+    '--firstInitialValue',
+    action  = 'store',
+    default = 0x4000000,
+    type    = int,
+    dest    = 'firstInitialValue',
+    help    = 'The first initial value to feed into the gold code sequence.'
+                      )
+
+  parser.add_argument (
+    '-siv',
+    '--secondInitialValue',
+    action  = 'store',
+    default = 0x4000000,
+    type    = int,
+    dest    = 'secondInitialValue',
+    help    = 'The second initial value to feed into the gold code sequence.'
+                      )
+
+  parser.add_argument (
+    '-spc',
+    '--samplesPerChip',
+    action  = 'store',
+    default = 10,
+    type    = int,
+    dest    = 'samplesPerChip',
+    help    = 'The number of samples per chip.'
+
                       )
 
   args = parser.parse_args()
@@ -291,6 +432,121 @@ def playback():
   else:
     print "ERROR: Device name and input file must be set for playback."
 
+def spreadSpectrumTransmit():
+  if( args.message and args.deviceName ):
+    print "Transmit info:"
+    print "\tMessage:\t\t'%s'" %( args.message )
+    print "\tDevice:\t\t\t%s" %( args.deviceName )
+    print "\nFormat info:"
+    print "\tBit depth:\t\t%d" %( args.bitDepth )
+    print "\tNumber of channels:\t%d" %( args.numberOfChannels )
+    print "\tSample rate:\t\t%.02f" %( args.sampleRate )
+    print "\nModulation info:"
+    print "\tBits per symbol:\t%d" %( args.bitsPerSymbol )
+    print "\tSamples per symbol:\t%d" %( args.samplesPerSymbol )
+    print "\tCarrier frequency:\t%.02f" %( args.carrierFrequency )
+    print "\nFilter info:"
+    print "\tFirst stopband:\t\t%.02f" %( args.firstStopBand )
+    print "\tFirst passband:\t\t%.02f" %( args.firstPassBand )
+    print "\tSecond passband:\t%.02f" %( args.secondPassBand )
+    print "\tSecond stopband:\t%.02f" %( args.secondStopBand )
+    print "\tPassband attenuation:\t%.02f" %( args.passBandAttenuation )
+    print "\tStopband attenuation:\t%.02f" %( args.stopBandAttenuation )
+    print "\nSpread spectrum info:"
+    print "\tSamples per chip:\t%d" %( args.samplesPerChip )
+    print "\tPolynomial degree:\t%d" %( args.polynomialDegree )
+    print "\tFirst generator:\t0x%x" %( args.firstGenerator )
+    print "\tSecond generator:\t0x%x" %( args.secondGenerator )
+    print "\tFirst initial value:\t0x%x" %( args.firstInitialValue )
+    print "\tSecond initial value:\t0x%x" %( args.secondInitialValue )
+
+    device = findDevice( args.deviceName )
+
+    if( device ):
+      if( device.doesSupportPlayback() ):
+        transmitter = \
+          SpreadSpectrumTransmitter (
+            args.bitDepth,
+            args.numberOfChannels,
+            args.sampleRate,
+            args.bitsPerSymbol,
+            args.samplesPerSymbol,
+            args.carrierFrequency,
+            args.outputFileName,
+            args.firstStopBand,
+            args.firstPassBand,
+            args.secondPassBand,
+            args.secondStopBand,
+            args.passBandAttenuation,
+            args.stopBandAttenuation,
+            args.polynomialDegree,
+            args.firstGenerator,
+            args.secondGenerator,
+            args.firstInitialValue,
+            args.secondInitialValue,
+            args.samplesPerChip
+                                    )
+
+        transmitter.transmit( device, args.message )
+      else:
+        print "ERROR: Device %s does not support playback." \
+          %( args.deviceName )
+    else:
+      print "ERROR: Could not find device %s." %( args.deviceName )
+  else:
+    print "ERROR: Message and device name must be set for transmit."
+
+def filterTransmit():
+  if( args.message and args.deviceName ):
+    print "Transmit info:"
+    print "\tMessage:\t\t'%s'" %( args.message )
+    print "\tDevice:\t\t\t%s" %( args.deviceName )
+    print "\nFormat info:"
+    print "\tBit depth:\t\t%d" %( args.bitDepth )
+    print "\tNumber of channels:\t%d" %( args.numberOfChannels )
+    print "\tSample rate:\t\t%.02f" %( args.sampleRate )
+    print "\nModulation info:"
+    print "\tBits per symbol:\t%d" %( args.bitsPerSymbol )
+    print "\tSamples per symbol:\t%d" %( args.samplesPerSymbol )
+    print "\tCarrier frequency:\t%.02f" %( args.carrierFrequency )
+    print "\nFilter info:"
+    print "\tFirst stopband:\t\t%.02f" %( args.firstStopBand )
+    print "\tFirst passband:\t\t%.02f" %( args.firstPassBand )
+    print "\tSecond passband:\t%.02f" %( args.secondPassBand )
+    print "\tSecond stopband:\t%.02f" %( args.secondStopBand )
+    print "\tPassband attenuation:\t%.02f" %( args.passBandAttenuation )
+    print "\tStopband attenuation:\t%.02f" %( args.stopBandAttenuation )
+
+    device = findDevice( args.deviceName )
+
+    if( device ):
+      if( device.doesSupportPlayback() ):
+        transmitter = \
+          FilterTransmitter (
+            args.bitDepth,
+            args.numberOfChannels,
+            args.sampleRate,
+            args.bitsPerSymbol,
+            args.samplesPerSymbol,
+            args.carrierFrequency,
+            args.outputFileName,
+            args.firstStopBand,
+            args.firstPassBand,
+            args.secondPassBand,
+            args.secondStopBand,
+            args.passBandAttenuation,
+            args.stopBandAttenuation
+                      )
+
+        transmitter.transmit( device, args.message )
+      else:
+        print "ERROR: Device %s does not support playback." \
+          %( args.deviceName )
+    else:
+      print "ERROR: Could not find device %s." %( args.deviceName )
+  else:
+    print "ERROR: Message and device name must be set for transmit."
+
 def transmit():
   if( args.message and args.deviceName ):
     print "Transmit info:"
@@ -316,7 +572,8 @@ def transmit():
             args.sampleRate,
             args.bitsPerSymbol,
             args.samplesPerSymbol,
-            args.carrierFrequency
+            args.carrierFrequency,
+            args.outputFileName
                       )
 
         transmitter.transmit( device, args.message )
@@ -381,6 +638,10 @@ def main():
     playback()
   elif( args.transmit ):
     transmit()
+  elif( args.filterTransmit ):
+    filterTransmit()
+  elif( args.spreadSpectrumTransmit ):
+    spreadSpectrumTransmit()
   else:
     parser.print_help()
 

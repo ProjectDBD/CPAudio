@@ -11,10 +11,15 @@ class BitStream:
     else:
       self.stream = \
         python_bit_stream_initialize_from_bit_packer( buffer.packer )
+
+      self.bitPacker = buffer 
+
   
   def __del__( self ):
     if( self.stream ):
       bit_stream_destroy( self.stream )
+
+    self.bitPacker = None
 
   def read( self, numberOfBits ):
     returnValue = None
@@ -38,3 +43,18 @@ class BitStream:
 
   def getSize( self ):
     return( bit_stream_get_number_of_remaining_bits( self.stream ) )
+
+  def getRawBytes( self ):
+    data = ''
+
+    if( self.stream.packer ):
+      data = python_bit_packer_get_bytes( self.stream.packer )
+
+      if( not data ):
+        print "ERROR: Could not read data from packer."
+
+        data = ''
+    else:
+      print "ERROR: Packer member of stream is not accessible."
+
+    return( data )
