@@ -83,28 +83,29 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
 
       numberOfSymbols -= 1
 
-    signal = python_filter_signal( self.filter, signal )
+    if( 0 < len( signal ) ):
+      signal = python_filter_signal( self.filter, signal )
 
-    for sampleValue in signal:
-      sampleValue = int( sampleValue )
-      sampleValue = struct.pack( "i", sampleValue )
-      sampleValue = struct.unpack( "I", sampleValue )[ 0 ]
-      sampleValue = socket.htonl( sampleValue )
-
-      if( 0 > sampleValue ):
+      for sampleValue in signal:
+        sampleValue = int( sampleValue )
         sampleValue = struct.pack( "i", sampleValue )
         sampleValue = struct.unpack( "I", sampleValue )[ 0 ]
+        sampleValue = socket.htonl( sampleValue )
 
-      if( Transmitter.lock ):
-        Transmitter.lock.acquire( True )
+        if( 0 > sampleValue ):
+          sampleValue = struct.pack( "i", sampleValue )
+          sampleValue = struct.unpack( "I", sampleValue )[ 0 ]
 
-      bitPacker.writeInt( sampleValue, self.bitDepth )
+        if( Transmitter.lock ):
+          Transmitter.lock.acquire( True )
 
-      for _ in range( self.numberOfChannels - 1 ):
-        bitPacker.writeInt( 0, self.bitDepth )
+        bitPacker.writeInt( sampleValue, self.bitDepth )
 
-      if( Transmitter.lock ):
-        Transmitter.lock.release()
+        for _ in range( self.numberOfChannels - 1 ):
+          bitPacker.writeInt( 0, self.bitDepth )
+
+        if( Transmitter.lock ):
+          Transmitter.lock.release()
 
     if( symbol == None ):
       return( False )

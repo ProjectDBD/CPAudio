@@ -49,11 +49,11 @@ class WAVRecorder:
             ):
           print "Starting recording..."
 
-          python_cahal_sleep( duration )
+          cahal_sleep( duration * 1000 )
 
           print "Stopping recording..."
 
-          python_cahal_stop_recording()
+          cahal_stop_recording()
 
           print "Stopped recording."
         else:

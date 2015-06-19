@@ -150,7 +150,7 @@ class Transmitter:
 
       duration = struct.unpack( "I", struct.pack( "i", duration ) )[ 0 ]
 
-      cahal_sleep( duration )
+      cahal_sleep( duration * 1000 )
 
       if( cahal_stop_playback() ):
         print "Transmit stopped."

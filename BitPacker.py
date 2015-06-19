@@ -35,3 +35,13 @@ class BitPacker:
 
         if( 0 == numberOfBits ):
           break
+
+  def writeBytes( self, buffer ):
+    if( buffer ):
+      if  (                                                   \
+        CPC_ERROR_CODE_NO_ERROR                               \
+        != python_bit_packer_add_bytes( buffer, self.packer ) \
+          ):
+        print "ERROR: Could not store buffer."
+    else:
+      print "ERROR: Cannot write a null buffer."

@@ -21,11 +21,17 @@ class BitStream:
 
     self.bitPacker = None
 
+  def readBytes( self, numberOfBits ):
+    ( numBitsRead, buffer ) = \
+      python_bit_stream_get_bits( self.stream, numberOfBits )
+
+    return( buffer )
+
   def read( self, numberOfBits ):
     returnValue = None
 
     if( 32 < numberOfBits ):
-      print "ERROR: Read call with too many bits (0x%x)." %( numberOfBits )
+      returnValue = self.readBytes( numberOfBits )
     else:
       ( numBitsRead, buffer ) = \
         python_bit_stream_get_bits( self.stream, numberOfBits )
