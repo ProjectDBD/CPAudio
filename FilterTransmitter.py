@@ -10,13 +10,13 @@ class FilterTransmitter( Transmitter ):
     self, bitDepth, numberOfChannels, sampleRate, bitsPerSymbol,
     samplesPerSymbol, carrierFrequency, outputFileName, firstStopband,
     firstPassband, secondPassband, secondStopband, passbandAttenuation,
-    stopbandAttenuation
+    stopbandAttenuation, writeOutput
                 ):
 
     Transmitter.__init__  (
       self, bitDepth, numberOfChannels, sampleRate,
       bitsPerSymbol, samplesPerSymbol, carrierFrequency,
-      outputFileName
+      outputFileName, writeOutput
                           )
 
     self.firstStopband        = firstStopband
@@ -97,4 +97,5 @@ class FilterTransmitter( Transmitter ):
   def __del__( self ):
     Transmitter.__del__( self )
 
-    csignal_destroy_passband_filter( self.filter )
+    if( self.filter ):
+      csignal_destroy_passband_filter( self.filter )

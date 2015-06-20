@@ -10,11 +10,15 @@ from BitStream import BitStream
 
 from ascii_graph import Pyasciigraph
 
+import WAVRecorder
+
 import os
 import math
 import wave
 import calendar
 import time
+import platform
+import re
 
 def bufferSamples( in_device, in_buffer, in_buffer_length ):                         
   if( EnergyDetector.bitPacker and EnergyDetector.lock ):
@@ -37,8 +41,10 @@ class EnergyDetector:
   def __init__  (
     self, bitDepth, numberOfChannels, sampleRate, observationInterval,
     firstStopband, firstPassband, secondPassband, secondStopband,
-    passbandAttenuation, stopbandAttenuation, outputFileName
+    passbandAttenuation, stopbandAttenuation, outputFileName,
+    filter, writeOutput
                 ):
+    self.signal               = None
     self.bitDepth             = bitDepth
     self.numberOfChannels     = numberOfChannels
     self.sampleRate           = sampleRate
@@ -53,27 +59,27 @@ class EnergyDetector:
     
     self.observationInterval  = observationInterval
 
-    self.outputFileName       = outputFileName
+    self.writeOutput          = writeOutput
+    self.applyFilter          = filter
 
-    self.filter =  \
-      python_initialize_kaiser_filter (
-        self.firstStopband,
-        self.firstPassband,
-        self.secondPassband,
-        self.secondStopband,
-        self.passbandAttenuation,
-        self.stopbandAttenuation,
-        int( self.sampleRate )
-                                      )
+    if( self.writeOutput ):
+      self.outputFileName = outputFileName
+    else:
+      self.outputFileName = None
 
-    self.configureWAVWriter()
-
-  def configureWAVWriter( self ):
-    self.wavWriter = wave.open( self.outputFileName, "wb" )
-        
-    self.wavWriter.setnchannels( self.numberOfChannels )
-    self.wavWriter.setsampwidth( self.bitDepth / 8 )
-    self.wavWriter.setframerate( self.sampleRate )
+    if( self.applyFilter ):
+      self.filter =  \
+        python_initialize_kaiser_filter (
+          self.firstStopband,
+          self.firstPassband,
+          self.secondPassband,
+          self.secondStopband,
+          self.passbandAttenuation,
+          self.stopbandAttenuation,
+          int( self.sampleRate )
+                                        )
+    else:
+      self.filter = None
 
   def detect( self, device, duration ):
     if  (                               \
@@ -91,6 +97,7 @@ class EnergyDetector:
       EnergyDetector.bitPacker  = BitPacker()
       EnergyDetector.lock       = _threading.Lock()
       EnergyDetector.semaphore  = _threading.Semaphore( 0 )
+
       self.signal               = BitStream( EnergyDetector.bitPacker )
 
       if  (
@@ -128,13 +135,15 @@ class EnergyDetector:
 
     print "Number of observations is 0x%x." %( numObservations )
 
-    numObservationSamples = \
+    numObservationSamples     = \
       int( math.ceil( self.observationInterval * self.sampleRate ) )
-
-    numObservationBits =  \
+    numObservationBits        =  \
       numObservationSamples * self.numberOfChannels * self.bitDepth
+    numProcessedObservations  = 0
+    graphPeriod               = 1.0 / self.observationInterval
 
-    numProcessedObservations = 0
+    if( graphPeriod < 0 ):
+      graphPeriod = 1
 
     print "Observation bits: %d." %( numObservationBits )
 
@@ -165,18 +174,21 @@ class EnergyDetector:
             bufferedSamples.read( self.bitDepth )
 
           part.append( sampleValue * 1.0 )
+
+        if( 0 < len( part ) ):
+          if( self.applyFilter ):
+            part = python_filter_signal( self.filter, part )
+
+          if( 0 == ( numProcessedObservations % int( graphPeriod ) ) ):
+            self.graphFFT( part )
+  
+          self.calculateEnergy( part )
       else:
         EnergyDetector.semaphore.acquire( True )
 
-      if( 0 < len( part ) ):
-        self.graphFFT( part )
-
-        self.calculateEnergy( part )
-
   def calculateEnergy( self, signal ):
     energy = 0
-    signal = python_filter_signal( self.filter, signal )
-
+    
     for sample in signal:
       energy += sample ** 2 
 
@@ -205,19 +217,34 @@ class EnergyDetector:
 
       label = "%.02f Hz" %( frequency )
 
-      dataPoints.append( ( frequency, fftMag[ n ] ) )
+      if( self.applyFilter ):
+        if  (
+          frequency >= self.firstStopband
+          and frequency <= self.secondStopband
+            ):
+          dataPoints.append( ( frequency, fftMag[ n ] ) )
+      else:
+        dataPoints.append( ( frequency, fftMag[ n ] ) )
 
     dataPoints  = self.decimate( dataPoints )
     graph       = Pyasciigraph()
     plot        = graph.graph( graphLabel, dataPoints )
 
-    os.system( 'cls' )
+    self.clearScreen()
 
     for line in plot:
       print(line)
 
+  def clearScreen( self ):
+    platform = self.determinePlatform()
+
+    if( platform == "Windows" ):
+      os.system( 'cls' )
+    else:
+      os.system( 'clear' )
+
   def decimate( self, dataPoints ):
-    numSubPoints = len( dataPoints ) / 60
+    numSubPoints = len( dataPoints ) / 40
 
     numGroups = int( math.ceil( len( dataPoints ) / numSubPoints ) )
 
@@ -246,13 +273,35 @@ class EnergyDetector:
     return( decimatedPoints )
 
   def __del__( self ):
-    if( self.wavWriter and self.signal ):
-      data = self.signal.getRawBytes()
+    if( self.writeOutput ):
+      WAVRecorder.saveSignalToWAV ( 
+        self.signal, self.outputFileName, self.numberOfChannels,
+        self.bitDepth, self.sampleRate
+                                  )
 
-      if( 0 < len( data ) ):
-        self.wavWriter.writeframes( data )
+    if( self.signal ):
+      self.signal = None
 
-    self.wavWriter.close()
+    if( self.filter ):
+      csignal_destroy_passband_filter( self.filter )
 
-    self.signal     = None
-    self.wavWriter  = None
+    EnergyDetector.bitPacker           = None
+    EnergyDetector.lock                = None
+    EnergyDetector.semaphore           = None
+    EnergyDetector.numObservationBits  = None
+
+  def determinePlatform( self ):
+    platform_info = platform.uname()
+
+    iphone_re = re.compile( "^iPhone", re.IGNORECASE )
+    
+    if( platform_info[ 0 ] == "Darwin" ):
+      if( iphone_re.search( platform_info[ 4 ] ) ):
+        return( "iPhone" )
+      else:
+        return( "Mac OSX" )
+    elif( platform_info[ 0 ] == "Linux" ):
+      return( "Android" )
+    elif( platform_info[ 0 ] == "Windows" ):
+      return( "Windows" )
+

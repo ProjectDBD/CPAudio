@@ -8,6 +8,8 @@ from cpaudio_lib import *
 from BitStream import BitStream
 from BitPacker import BitPacker
 
+import WAVRecorder
+
 import calendar
 import time
 import sys
@@ -44,7 +46,7 @@ class Transmitter:
 
   def __init__  (
     self, bitDepth, numberOfChannels, sampleRate, bitsPerSymbol,
-    samplesPerSymbol, carrierFrequency, outputFileName
+    samplesPerSymbol, carrierFrequency, outputFileName, writeOutput
                 ):
 
     self.bitDepth         = bitDepth
@@ -57,16 +59,12 @@ class Transmitter:
     self.constellationSize  = 2 ** self.bitsPerSymbol
     self.basebandAmplitude  = 2 ** ( self.bitDepth - 1 ) - 1
 
-    self.outputFileName = outputFileName
-
-    self.configureWAVWriter()
-
-  def configureWAVWriter( self ):
-    self.wavWriter = wave.open( self.outputFileName, "wb" )
-        
-    self.wavWriter.setnchannels( self.numberOfChannels )
-    self.wavWriter.setsampwidth( self.bitDepth / 8 )
-    self.wavWriter.setframerate( self.sampleRate )
+    if( writeOutput ):
+      self.outputFileName = outputFileName
+      self.writeOutput    = writeOutput
+    else:
+      self.outputFileName = None
+      self.writeOutput    = None
 
   def transmit( self, device, message ):
     if  (                               \
@@ -210,13 +208,10 @@ class Transmitter:
       return( True )
 
   def __del__( self ):
-    if( self.wavWriter ):
-      if( Transmitter.signal ):
-        data = Transmitter.signal.getRawBytes()
-
-        if( 0 < len( data ) ):
-          self.wavWriter.writeframes( data )
-
-      self.wavWriter.close()
+    if( self.writeOutput ):
+      WAVRecorder.saveSignalToWAV ( 
+        Transmitter.signal, self.outputFileName, self.numberOfChannels,
+        self.bitDepth, self.sampleRate
+                                  )
 
     Transmitter.signal  = None

@@ -1,6 +1,23 @@
 import wave
 
 from cpaudio_lib import *
+  
+def saveSignalToWAV (
+  signal, outputFileName, numberOfChannels, bitDepth, sampleRate
+                      ):
+  if( signal ):
+    wavWriter = wave.open( outputFileName, "wb" )
+        
+    wavWriter.setnchannels( numberOfChannels )
+    wavWriter.setsampwidth( bitDepth / 8 )
+    wavWriter.setframerate( sampleRate )
+
+    data = signal.getRawBytes()
+
+    if( 0 < len( data ) ):
+      wavWriter.writeframes( data )
+
+    wavWriter.close()
 
 def bufferSamples( in_device, in_buffer, in_buffer_length ):                         
   if( WAVRecorder.wavFile ):
@@ -66,3 +83,4 @@ class WAVRecorder:
         print "ERROR: Error while creating WAV file."
     else:
       print "ERROR: Could not find an appropriate stream."
+

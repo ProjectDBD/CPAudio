@@ -12,14 +12,15 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
     samplesPerSymbol, carrierFrequency, outputFileName, firstStopband,
     firstPassband, secondPassband, secondStopband, passbandAttenuation,
     stopbandAttenuation, polynomialDegree, firstGenerator, secondGenerator,
-    firstInitialValue, secondInitialValue, samplesPerChip
+    firstInitialValue, secondInitialValue, samplesPerChip, filter, writeOutput
                 ):
 
     FilterTransmitter.__init__  (
       self, bitDepth, numberOfChannels, sampleRate,
       bitsPerSymbol, samplesPerSymbol, carrierFrequency,
       outputFileName, firstStopband, firstPassband, secondPassband,
-      secondStopband, passbandAttenuation, stopbandAttenuation
+      secondStopband, passbandAttenuation, stopbandAttenuation,
+      writeOutput
                           )
 
     self.polynomialDegree   = polynomialDegree
@@ -40,6 +41,8 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
         self.polynomialDegree, self.firstGenerator, self.secondGenerator,
         self.firstInitialValue, self.secondInitialValue
                                   )
+
+    self.applyFilter = filter
 
   def bufferSymbols( self, symbolTracker, bitPacker, numberOfSymbols ):
     symbol = symbolTracker.read( self.bitsPerSymbol )
@@ -84,7 +87,8 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
       numberOfSymbols -= 1
 
     if( 0 < len( signal ) ):
-      signal = python_filter_signal( self.filter, signal )
+      if( self.applyFilter ):
+        signal = python_filter_signal( self.filter, signal )
 
       for sampleValue in signal:
         sampleValue = int( sampleValue )
