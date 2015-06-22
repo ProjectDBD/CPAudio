@@ -1,4 +1,3 @@
-cmake_minimum_required( VERSION 3.0 )
 
 set( PROJECT_NAME "cpaudio_lib" )
 
@@ -130,6 +129,9 @@ list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/WAVRecorder.py" )
 list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/BitStream.py" )
 list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/BitPacker.py" )
 list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/Transmitter.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/FilterTransmitter.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/SpreadSpectrumTransmitter.py" )
+list( APPEND SCRIPTS "${PROJECT_SOURCE_DIR}/EnergyDetector.py" )
 
 set( WRAPPERS "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.py" )
 
