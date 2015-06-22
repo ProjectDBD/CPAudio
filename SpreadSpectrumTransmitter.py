@@ -90,6 +90,15 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
       if( self.applyFilter ):
         signal = python_filter_signal( self.filter, signal )
 
+        maxValue = -1
+
+        for sampleValue in signal:
+          if( abs( sampleValue ) > maxValue ):
+            maxValue = abs( sampleValue )
+    
+        signal = \
+          map( lambda x: self.basebandAmplitude * ( x / maxValue ), signal )
+
       for sampleValue in signal:
         sampleValue = int( sampleValue )
         sampleValue = struct.pack( "i", sampleValue )

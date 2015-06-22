@@ -68,8 +68,16 @@ class FilterTransmitter( Transmitter ):
 
     signal = python_filter_signal( self.filter, signal )
 
+    maxValue = -1
+
     for sampleValue in signal:
-      sampleValue = int( sampleValue )
+      if( abs( sampleValue ) > maxValue ):
+        maxValue = abs( sampleValue )
+
+    signal = map( lambda x: x / maxValue, signal )
+
+    for sampleValue in signal:
+      sampleValue = int( sampleValue * self.basebandAmplitude )
       sampleValue = struct.pack( "i", sampleValue )
       sampleValue = struct.unpack( "I", sampleValue )[ 0 ]
       sampleValue = socket.htonl( sampleValue )
