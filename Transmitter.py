@@ -33,6 +33,9 @@ def playback( in_device, in_buffer_length ):
     Transmitter.lock.release()
 
     if( 0 < numberOfBits ):
+      print "In buffer length: %d." %( in_buffer_length )
+      print "Sending number of bits: %d." %( numberOfBits )
+
       data = buffer
 
   else:
@@ -84,8 +87,10 @@ class Transmitter:
       numSamples  = numSymbols * self.samplesPerSymbol
       duration    = math.ceil( numSamples / self.sampleRate )
 
+      print "Buffering up to 5 seconds of audio."
+
       numSymbolsToRead =  \
-        math.ceil( self.sampleRate / self.samplesPerSymbol * 0.5 )
+        math.ceil( self.sampleRate / self.samplesPerSymbol * 5 )
 
       print "Symbols to read per iteration is 0x%x." %( numSymbolsToRead )
 

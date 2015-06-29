@@ -49,7 +49,11 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
 
     signal = []
 
+    print "Number of symbols: %d" %( numberOfSymbols )
+
     while( symbol != None and numberOfSymbols > 0 ):
+      print "Symbol: %d" %( symbol )
+
       signalComponents =  \
         python_modulate_symbol  (
           symbol,
@@ -87,6 +91,8 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
       numberOfSymbols -= 1
 
     if( 0 < len( signal ) ):
+      print "Length is %d." %( len( signal ) )
+
       if( self.applyFilter ):
         signal = python_filter_signal( self.filter, signal )
 

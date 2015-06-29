@@ -3,6 +3,7 @@ try:
 except ImportError:
   import dummy_threading as _threading
 
+import math
 import time
 import argparse
 
@@ -63,6 +64,16 @@ def setup():
     action  = 'store_true',                     \
     dest    = 'list_device',                    \
     help    = 'List the details about a device.'\
+                      )
+
+  parser.add_argument (
+    '-sc',
+    '-synchronizationChips',
+    action  = 'store',
+    default = 4 * ( 2 ** 7 - 1 ),
+    type    = int,
+    dest    = 'synchronizationChips',
+    help    = 'The number of synchronization chips to transmit.'
                       )
 
   parser.add_argument (                 \
@@ -470,9 +481,8 @@ def playback():
     print "ERROR: Device name and input file must be set for playback."
 
 def spreadSpectrumTransmit():
-  if( args.message and args.deviceName ):
+  if( args.deviceName ):
     print "Transmit info:"
-    print "\tMessage:\t\t'%s'" %( args.message )
     print "\tDevice:\t\t\t%s" %( args.deviceName )
     print "\tOutput signal:\t\t%s" %( "Yes" if( args.write_output ) else "No" )
     print "\nFormat info:"
@@ -483,6 +493,7 @@ def spreadSpectrumTransmit():
     print "\tBits per symbol:\t%d" %( args.bitsPerSymbol )
     print "\tSamples per symbol:\t%d" %( args.samplesPerSymbol )
     print "\tCarrier frequency:\t%.02f" %( args.carrierFrequency )
+    print "\tSynchronization chips:\t%d" %( args.synchronizationChips )
 
     if( args.filter ):
       print "\nFilter info:"
@@ -530,7 +541,39 @@ def spreadSpectrumTransmit():
             args.write_output
                                     )
 
-        transmitter.transmit( device, args.message )
+        mesage = ''
+
+        if( args.synchronizationChips ):
+          numChipSamples            = \
+            args.synchronizationChips * args.samplesPerChip
+          numSynchronizationSymbols = \
+            math.ceil( numChipSamples * 1.0 / args.samplesPerSymbol * 1.0 )
+          numSymbolsPerByte         = 8 / args.bitsPerSymbol
+          numBytes                  = \
+            int (
+              math.ceil (
+                numSynchronizationSymbols * 1.0 / numSymbolsPerByte * 1.0
+                        )
+                )
+        
+          print "Chip Sample: %d" %( numChipSamples )
+          print "Synchronization symbols: %d" %( numSynchronizationSymbols )
+          print "Symbols per Byte: %d" %( numSymbolsPerByte )
+          print "Bytes: %d" %( numBytes )
+
+          message = '\x00' * numBytes
+
+        if( args.message ):
+          message = message + args.message
+
+        print "\nMessage info:"
+        print "\tMessage:\t\t%s" \
+          %( args.message if( args.message ) else '(None)' )
+        print "\tMessage length:\t\t%d" \
+          %( len( args.message ) if( args.message ) else 0 )
+        print "\tPadded message length:\t%d" %( len( message ) )
+
+        transmitter.transmit( device, message )
       else:
         print "ERROR: Device %s does not support playback." \
           %( args.deviceName )
