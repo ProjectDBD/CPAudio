@@ -7,6 +7,7 @@ from cpaudio_lib import *
 
 from BitPacker import BitPacker
 from BitStream import BitStream
+from BaseRecorder import BaseRecorder
 
 from ascii_graph import Pyasciigraph
 
@@ -30,104 +31,24 @@ def bufferSamples( in_device, in_buffer, in_buffer_length ):
 
     EnergyDetector.semaphore.release()
   else:
-    print "ERROR: WAV file handler is not initialized!"
+    print "ERROR: Packer and lock are not initialized!"
 
-class EnergyDetector:
-  bitPacker           = None
-  lock                = None
-  semaphore           = None
-  numObservationBits  = None
-
+class EnergyDetector( BaseRecorder ):
   def __init__  (
     self, bitDepth, numberOfChannels, sampleRate, observationInterval,
-    firstStopband, firstPassband, secondPassband, secondStopband,
-    passbandAttenuation, stopbandAttenuation, outputFileName,
-    filter, writeOutput
+    widebandFirstStopband, widebandFirstPassband, widebandSecondPassband,
+    widebandSecondStopband, passbandAttenuation, stopbandAttenuation,
+    outputFileName, filter, writeOutput
                 ):
-    self.signal               = None
-    self.bitDepth             = bitDepth
-    self.numberOfChannels     = numberOfChannels
-    self.sampleRate           = sampleRate
-   
-    self.firstStopband        = firstStopband
-    self.firstPassband        = firstPassband
-    self.secondPassband       = secondPassband
-    self.secondStopband       = secondStopband
 
-    self.passbandAttenuation  = passbandAttenuation
-    self.stopbandAttenuation  = stopbandAttenuation
-    
+    BaseRecorder.__init__  (
+      self, bitDepth, numberOfChannels, sampleRate, widebandFirstStopband,
+      widebandFirstPassband, widebandSecondPassband, widebandSecondStopband,
+      passbandAttenuation, stopbandAttenuation, outputFileName, filter,
+      writeOutput
+                          )
+
     self.observationInterval  = observationInterval
-
-    self.writeOutput          = writeOutput
-    self.applyFilter          = filter
-
-    if( self.writeOutput ):
-      self.outputFileName = outputFileName
-    else:
-      self.outputFileName = None
-
-    if( self.applyFilter ):
-      self.filter =  \
-        python_initialize_kaiser_filter (
-          self.firstStopband,
-          self.firstPassband,
-          self.secondPassband,
-          self.secondStopband,
-          self.passbandAttenuation,
-          self.stopbandAttenuation,
-          int( self.sampleRate )
-                                        )
-    else:
-      self.filter = None
-
-  def detect( self, device, duration ):
-    if  (                               \
-      device.hasAppropriateStream (     \
-            CAHAL_DEVICE_INPUT_STREAM,  \
-            self.numberOfChannels,      \
-            self.bitDepth,              \
-            self.sampleRate             \
-                                  )     \
-        ):
-      flags =                                   \
-        CAHAL_AUDIO_FORMAT_FLAGISSIGNEDINTEGER  \
-        | CAHAL_AUDIO_FORMAT_FLAGISPACKED                                                                                
-
-      EnergyDetector.bitPacker  = BitPacker()
-      EnergyDetector.lock       = _threading.Lock()
-      EnergyDetector.semaphore  = _threading.Semaphore( 0 )
-
-      self.signal               = BitStream( EnergyDetector.bitPacker )
-
-      if  (
-        start_recording (               \
-          device.struct,                \
-          CAHAL_AUDIO_FORMAT_LINEARPCM, \
-          self.numberOfChannels,        \
-          self.sampleRate,              \
-          self.bitDepth,                \
-          bufferSamples,                \
-          flags                         \
-                        )               \
-          ):
-        print "Starting recording..."
-
-        self.processObservations( duration )
-
-        print "Stopping recording..."
-
-        cahal_stop_recording()
-
-        print "Stopped recording."
-      else:
-        print "ERROR: Could not start recording."
-    else:
-      print "ERROR: Could not find an appropriate stream."
-
-    EnergyDetector.bitPacker  = None
-    EnergyDetector.lock       = None
-    EnergyDetector.semaphore  = None
 
   def processObservations( self, duration ):
     numObservations = \
@@ -177,7 +98,7 @@ class EnergyDetector:
 
         if( 0 < len( part ) ):
           if( self.applyFilter ):
-            part = python_filter_signal( self.filter, part )
+            part = python_filter_signal( self.widebandFilter, part )
 
           if( 0 == ( numProcessedObservations % int( graphPeriod ) ) ):
             self.graphFFT( part )
@@ -219,8 +140,8 @@ class EnergyDetector:
 
       if( self.applyFilter ):
         if  (
-          frequency >= self.firstStopband
-          and frequency <= self.secondStopband
+          frequency >= self.widebandFirstPassband
+          and frequency <= self.widebandSecondPassband
             ):
           dataPoints.append( ( frequency, fftMag[ n ] ) )
       else:
@@ -282,8 +203,8 @@ class EnergyDetector:
     if( self.signal ):
       self.signal = None
 
-    if( self.filter ):
-      csignal_destroy_passband_filter( self.filter )
+    if( self.widebandFilter ):
+      csignal_destroy_passband_filter( self.widebandFilter )
 
     EnergyDetector.bitPacker           = None
     EnergyDetector.lock                = None
