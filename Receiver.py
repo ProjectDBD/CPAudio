@@ -202,3 +202,11 @@ class Receiver( BaseRecorder ):
         symbol = struct.unpack( "B", buffer )[ 0 ] 
 
       nSymbols += 1
+
+    bit_stream_destroy( tracker )
+
+  def __del__( self ):
+    csignal_destroy_passband_filter( self.narrowbandFilter )
+
+    csignal_destroy_gold_code( self.inphaseCode )
+    csignal_destroy_gold_code( self.quadratureCode )
