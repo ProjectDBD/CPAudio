@@ -1,8 +1,3 @@
-try:
-  import threading as _threading
-except ImportError:
-  import dummy_threading as _threading
-
 from cpaudio_lib import *
 
 from BitPacker import BitPacker
@@ -10,8 +5,6 @@ from BitStream import BitStream
 from BaseRecorder import BaseRecorder
 
 from ascii_graph import Pyasciigraph
-
-import WAVRecorder
 
 import os
 import math
@@ -21,24 +14,12 @@ import time
 import platform
 import re
 
-def bufferSamples( in_device, in_buffer, in_buffer_length ):                         
-  if( EnergyDetector.bitPacker and EnergyDetector.lock ):
-    EnergyDetector.lock.acquire( True )
-
-    EnergyDetector.bitPacker.writeBytes( in_buffer )
-
-    EnergyDetector.lock.release()
-
-    EnergyDetector.semaphore.release()
-  else:
-    print "ERROR: Packer and lock are not initialized!"
-
 class EnergyDetector( BaseRecorder ):
   def __init__  (
     self, bitDepth, numberOfChannels, sampleRate, observationInterval,
     widebandFirstStopband, widebandFirstPassband, widebandSecondPassband,
     widebandSecondStopband, passbandAttenuation, stopbandAttenuation,
-    outputFileName, filter, writeOutput
+    outputFileName, filter, writeOutput, duration
                 ):
 
     BaseRecorder.__init__  (
@@ -48,70 +29,60 @@ class EnergyDetector( BaseRecorder ):
       writeOutput
                           )
 
-    self.observationInterval  = observationInterval
-
-  def processObservations( self, duration ):
-    numObservations = \
-      int( math.ceil( duration / self.observationInterval ) )
-
-    print "Number of observations is 0x%x." %( numObservations )
-
-    numObservationSamples     = \
+    self.observationInterval      = observationInterval
+    self.duration                 = duration
+    self.numObservations          = \
+      int( math.ceil( self.duration / self.observationInterval ) )
+    self.numObservationSamples    = \
       int( math.ceil( self.observationInterval * self.sampleRate ) )
-    numObservationBits        =  \
-      numObservationSamples * self.numberOfChannels * self.bitDepth
-    numProcessedObservations  = 0
-    graphPeriod               = 1.0 / self.observationInterval
+    self.numObservationBits       =  \
+      self.numObservationSamples * self.numberOfChannels * self.bitDepth
+    self.numProcessedObservations = 0
+    self.graphPeriod              = 1.0 / self.observationInterval
 
-    if( graphPeriod < 0 ):
-      graphPeriod = 1
+    if( self.graphPeriod < 0 ):
+      self.graphPeriod = 1
 
-    print "Observation bits: %d." %( numObservationBits )
+  def getNumberOfBitsToRead( self ):
+    return( self.numObservationBits )
 
-    while( numProcessedObservations < numObservations ):
-      part = []
+  def processBuffer( self, buffer ):
+    done = False
 
-      EnergyDetector.lock.acquire( True )
+    if( len( buffer ) * 8 < self.numObservationBits ):
+      print "ERROR: Received an incomplete buffer (%d), expexting (%d)" \
+        %( ( len( buffer ) * 8 ), self.numObservationBits )
 
-      availableData = self.signal.getSize()
+      done = True
+    else:
+      part            = []
+      bufferedSamples = BitStream( buffer )
 
-      EnergyDetector.lock.release()
+      for sampleIndex in range( self.numObservationSamples ):
+        sampleValue = bufferedSamples.read( self.bitDepth )            
 
-      if( availableData >= numObservationBits ):
-        numProcessedObservations += 1
+        for channelIndex in range( self.numberOfChannels - 1 ):
+          bufferedSamples.read( self.bitDepth )
 
-        EnergyDetector.lock.acquire( True )
+        part.append( sampleValue * 1.0 )
 
-        buffer = self.signal.read( numObservationBits )
+      if( 0 < len( part ) ):
+        if( self.applyFilter ):
+          part = python_filter_signal( self.widebandFilter, part )
 
-        EnergyDetector.lock.release()
-
-        bufferedSamples = BitStream( buffer )
-
-        for sampleIndex in range( numObservationSamples ):
-          sampleValue = bufferedSamples.read( self.bitDepth )            
-
-          for channelIndex in range( self.numberOfChannels - 1 ):
-            bufferedSamples.read( self.bitDepth )
-
-          part.append( sampleValue * 1.0 )
-
-        if( 0 < len( part ) ):
-          if( self.applyFilter ):
-            part = python_filter_signal( self.widebandFilter, part )
-
-          if( 0 == ( numProcessedObservations % int( graphPeriod ) ) ):
-            self.graphFFT( part )
+        if( 0 == ( self.numProcessedObservations % int( self.graphPeriod ) ) ):
+          self.graphFFT( part )
   
-          self.calculateEnergy( part )
-      else:
-        EnergyDetector.semaphore.acquire( True )
+        self.calculateEnergy( part )     
+
+      self.numProcessedObservations += 1
+
+      done = ( self.numProcessedObservations >= self.numObservations )
+
+    return( done )
 
   def calculateEnergy( self, signal ):
-    energy = 0
-    
-    for sample in signal:
-      energy += sample ** 2 
+    energy = python_csignal_calculate_energy( signal )
 
     print "Energy: %.02f dB" %( 10 * math.log10( energy ) )
 

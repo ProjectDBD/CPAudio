@@ -47,7 +47,7 @@ class BaseRecorder:
     self.signal                 = None
     self.bitDepth               = bitDepth
     self.numberOfChannels       = numberOfChannels
-    self.sampleRate             = sampleRate
+    self.sampleRate             = int( sampleRate )
    
     self.widebandFirstStopband  = widebandFirstStopband
     self.widebandFirstPassband  = widebandFirstPassband
@@ -79,7 +79,7 @@ class BaseRecorder:
     else:
       self.widebandFilter = None
 
-  def record( self, device, duration ):
+  def record( self, device ):
     if  (                               \
       device.hasAppropriateStream (     \
             CAHAL_DEVICE_INPUT_STREAM,  \
@@ -96,7 +96,7 @@ class BaseRecorder:
       BaseRecorder.lock       = _threading.Lock()
       BaseRecorder.semaphore  = _threading.Semaphore( 0 )
 
-      self.signal               = BitStream( BaseRecorder.bitPacker )
+      self.signal             = BitStream( BaseRecorder.bitPacker )
 
       if  (
         start_recording (               \
@@ -111,7 +111,7 @@ class BaseRecorder:
           ):
         print "Starting recording..."
 
-        self.processObservations( duration )
+        self.processObservations()
 
         print "Stopping recording..."
 
@@ -127,22 +127,34 @@ class BaseRecorder:
     BaseRecorder.lock       = None
     BaseRecorder.semaphore  = None
 
-  def processObservations( self, duration ):
+  def processObservations( self ):
     done = False
 
     while( not done ):
+      buffer = None
+
       BaseRecorder.semaphore.acquire( True )
 
       BaseRecorder.lock.acquire( True )
 
-      buffer = self.signal.read( numObservationBits )
+      availableData = self.signal.getSize()
+      nBitsToRead   = self.getNumberOfBitsToRead()
+
+      print "Available %d, waiting for %d." %( availableData, nBitsToRead )
+
+      if( availableData >= nBitsToRead ):
+        buffer = self.signal.read( nBitsToRead )
 
       BaseRecorder.lock.release()
 
-      done = processBuffer( buffer, duration )
+      if( None != buffer ):
+        done = self.processBuffer( buffer )
 
-  def processbuffer( self, buffer, duration ):
-    return( False )
+  def getNumberOfBitsToRead( self ):
+    return( 0 )
+
+  def processbuffer( self, buffer ):
+    return( True )
 
   def __del__( self ):
     if( self.writeOutput ):

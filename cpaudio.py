@@ -17,6 +17,7 @@ from FilterTransmitter import FilterTransmitter
 from Transmitter import Transmitter
 
 from EnergyDetector import EnergyDetector
+from Receiver import Receiver
 
 parser  = None
 args    = None
@@ -104,7 +105,7 @@ def setup():
     '-w',
     '--write-output',
     action  = 'store_true',
-    dest    = 'write_output',
+    dest    = 'writeOutput',
     help    = 'Flag indicating to save output to file.'
                       )
 
@@ -130,6 +131,24 @@ def setup():
     action  = 'store_true',           \
     dest    = 'record',               \
     help    = 'Record audio samples'  \
+                      )
+
+  parser.add_argument (
+    '-nts',
+    '--numberOfTrainingSymbols',
+    action  = 'store',
+    default = 13,
+    type    = int,
+    dest    = 'numberOfTrainingSymbols',
+    help    = 'The number of symbols to use to train the receiver'
+                      )
+
+  parser.add_argument (
+    '-R',
+    '--receive',
+    action  = 'store_true',
+    dest    = 'receive',
+    help    = 'Receive a transmitted signal'
                       )
 
   parser.add_argument (
@@ -209,46 +228,84 @@ def setup():
                       )
 
   parser.add_argument (
-    '-fsb',
-    '--firstStopBand',
+    '-wsb1',
+    '--widebandFirstStopband',
     action  = 'store',
     default = 6000.0,
     type    = float,
-    dest    = 'firstStopBand',
+    dest    = 'widebandFirstStopband',
     help    = 'Frequencies under this frequency should be attenuated.'
                       )
 
   parser.add_argument (
-    '-fpb',
-    '--firstPassBand',
+    '-wpb1',
+    '--widebandFirstPassband',
     action  = 'store',
     default = 7000.0,
     type    = float,
-    dest    = 'firstPassBand',
-    help    = 'Frequencies between this band and secondPassBand should be passed through without attenuation.'
+    dest    = 'widebandFirstPassband',
+    help    = 'Frequencies between this band and widebandSecondPassband should be passed through without attenuation.'
                       )
 
-
   parser.add_argument (
-    '-spb',
-    '--secondPassBand',
+    '-wpb2',
+    '--widebandSecondPassband',
     action  = 'store',
     default = 9000.0,
     type    = float,
-    dest    = 'secondPassBand',
-    help    = 'Frequencies between this band and firstPassBand should be passed through without attenuation.'
+    dest    = 'widebandSecondPassband',
+    help    = 'Frequencies between this band and widebandFirstPassband should be passed through without attenuation.'
                       )
 
   parser.add_argument (
-    '-ssb',
-    '--secondStopBand',
+    '-wsb2',
+    '--widebandSecondStopband',
     action  = 'store',
     default = 10000.0,
     type    = float,
-    dest    = 'secondStopBand',
+    dest    = 'widebandSecondStopband',
     help    = 'Frequecies above this frequency should be attenuated.'
                       )
 
+  parser.add_argument (
+    '-nsb1',
+    '--narrowbandFirstStopband',
+    action  = 'store',
+    default = 6900.0,
+    type    = float,
+    dest    = 'narrowbandFirstStopband',
+    help    = 'Frequencies under this frequency should be attenuated.'
+                      )
+
+  parser.add_argument (
+    '-npb1',
+    '--narrowbandFirstPassband',
+    action  = 'store',
+    default = 7900.0,
+    type    = float,
+    dest    = 'narrowbandFirstPassband',
+    help    = 'Frequencies between this band and narrowbandSecondPassband should be passed through without attenuation.'
+                      )
+
+  parser.add_argument (
+    '-npb2',
+    '--narrowbandSecondPassband',
+    action  = 'store',
+    default = 8100.0,
+    type    = float,
+    dest    = 'narrowbandSecondPassband',
+    help    = 'Frequencies between this band and narrowbandFirstPassband should be passed through without attenuation.'
+                      )
+
+  parser.add_argument (
+    '-nsb2',
+    '--narrowbandSecondStopband',
+    action  = 'store',
+    default = 9100.0,
+    type    = float,
+    dest    = 'narrowbandSecondStopband',
+    help    = 'Frequecies above this frequency should be attenuated.'
+                      )
   parser.add_argument (
     '-pa',
     '--passbandAttenuation',
@@ -364,7 +421,6 @@ def setup():
     type    = int,
     dest    = 'samplesPerChip',
     help    = 'The number of samples per chip.'
-
                       )
 
   parser.add_argument (
@@ -484,7 +540,7 @@ def spreadSpectrumTransmit():
   if( args.deviceName ):
     print "Transmit info:"
     print "\tDevice:\t\t\t%s" %( args.deviceName )
-    print "\tOutput signal:\t\t%s" %( "Yes" if( args.write_output ) else "No" )
+    print "\tOutput signal:\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
     print "\nFormat info:"
     print "\tBit depth:\t\t%d" %( args.bitDepth )
     print "\tNumber of channels:\t%d" %( args.numberOfChannels )
@@ -497,10 +553,10 @@ def spreadSpectrumTransmit():
 
     if( args.filter ):
       print "\nFilter info:"
-      print "\tFirst stopband:\t\t%.02f" %( args.firstStopBand )
-      print "\tFirst passband:\t\t%.02f" %( args.firstPassBand )
-      print "\tSecond passband:\t%.02f" %( args.secondPassBand )
-      print "\tSecond stopband:\t%.02f" %( args.secondStopBand )
+      print "\tFirst stopband:\t\t%.02f" %( args.widebandFirstStopband )
+      print "\tFirst passband:\t\t%.02f" %( args.widebandFirstPassband )
+      print "\tSecond passband:\t%.02f" %( args.widebandSecondPassband )
+      print "\tSecond stopband:\t%.02f" %( args.widebandSecondStopband )
       print "\tPassband attenuation:\t%.02f" %( args.passbandAttenuation )
       print "\tStopband attenuation:\t%.02f" %( args.stopbandAttenuation )
 
@@ -525,10 +581,10 @@ def spreadSpectrumTransmit():
             args.samplesPerSymbol,
             args.carrierFrequency,
             args.outputFileName,
-            args.firstStopBand,
-            args.firstPassBand,
-            args.secondPassBand,
-            args.secondStopBand,
+            args.widebandFirstStopband,
+            args.widebandFirstPassband,
+            args.widebandSecondPassband,
+            args.widebandSecondStopband,
             args.passbandAttenuation,
             args.stopbandAttenuation,
             args.polynomialDegree,
@@ -538,7 +594,7 @@ def spreadSpectrumTransmit():
             args.secondInitialValue,
             args.samplesPerChip,
             args.filter,
-            args.write_output
+            args.writeOutput
                                     )
 
         mesage = ''
@@ -587,7 +643,7 @@ def filterTransmit():
     print "Transmit info:"
     print "\tMessage:\t\t'%s'" %( args.message )
     print "\tDevice:\t\t\t%s" %( args.deviceName )
-    print "\tOutput signal:\t\t%s" %( "Yes" if( args.write_output ) else "No" )
+    print "\tOutput signal:\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
     print "\nFormat info:"
     print "\tBit depth:\t\t%d" %( args.bitDepth )
     print "\tNumber of channels:\t%d" %( args.numberOfChannels )
@@ -597,17 +653,17 @@ def filterTransmit():
     print "\tSamples per symbol:\t%d" %( args.samplesPerSymbol )
     print "\tCarrier frequency:\t%.02f" %( args.carrierFrequency )
     print "\nFilter info:"
-    print "\tFirst stopband:\t\t%.02f" %( args.firstStopBand )
-    print "\tFirst passband:\t\t%.02f" %( args.firstPassBand )
-    print "\tSecond passband:\t%.02f" %( args.secondPassBand )
-    print "\tSecond stopband:\t%.02f" %( args.secondStopBand )
+    print "\tFirst stopband:\t\t%.02f" %( args.widebandFirstStopband )
+    print "\tFirst passband:\t\t%.02f" %( args.widebandFirstPassband )
+    print "\tSecond passband:\t%.02f" %( args.widebandSecondPassband )
+    print "\tSecond stopband:\t%.02f" %( args.widebandSecondStopband )
     print "\tPassband attenuation:\t%.02f" %( args.passbandAttenuation )
     print "\tStopband attenuation:\t%.02f" %( args.stopbandAttenuation )
 
     if( args.filter ):
       print "WARN: Filter flag set for filterTransmit. Redundant option set."
 
-    if( args.write_output ):
+    if( args.writeOutput ):
       print "\nOutput info:"
       print "\tFile name:\t\t%s" %( args.outputFileName )
 
@@ -624,13 +680,13 @@ def filterTransmit():
             args.samplesPerSymbol,
             args.carrierFrequency,
             args.outputFileName,
-            args.firstStopBand,
-            args.firstPassBand,
-            args.secondPassBand,
-            args.secondStopBand,
+            args.widebandFirstStopband,
+            args.widebandFirstPassband,
+            args.widebandSecondPassband,
+            args.widebandSecondStopband,
             args.passbandAttenuation,
             args.stopbandAttenuation,
-            args.write_output
+            args.writeOutput
                       )
 
         transmitter.transmit( device, args.message )
@@ -647,7 +703,7 @@ def transmit():
     print "Transmit info:"
     print "\tMessage:\t\t'%s'" %( args.message )
     print "\tDevice:\t\t\t%s" %( args.deviceName )
-    print "\tOutput signal:\t\t%s" %( "Yes" if( args.write_output ) else "No" )
+    print "\tOutput signal:\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
     print "\nFormat info:"
     print "\tBit depth:\t\t%d" %( args.bitDepth )
     print "\tNumber of channels:\t%d" %( args.numberOfChannels )
@@ -657,7 +713,7 @@ def transmit():
     print "\tSamples per symbol:\t%d" %( args.samplesPerSymbol )
     print "\tCarrier frequency:\t%.02f" %( args.carrierFrequency )
 
-    if( args.write_output ):
+    if( args.writeOutput ):
       print "\nOutput info:"
       print "\tFile name:\t\t%s" %( args.outputFileName )
 
@@ -674,7 +730,7 @@ def transmit():
             args.samplesPerSymbol,
             args.carrierFrequency,
             args.outputFileName,
-            args.write_output
+            args.writeOutput
                       )
 
         transmitter.transmit( device, args.message )
@@ -726,21 +782,21 @@ def energyDetector():
     print "\tBit depth:\t\t%d" %( args.bitDepth )
     print "\tNumber of channels:\t%d" %( args.numberOfChannels )
     print "\tSample rate:\t\t%.02f" %( args.sampleRate )
-    print "\tOutput signal:\t\t%s" %( "Yes" if( args.write_output ) else "No" )
+    print "\tOutput signal:\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
     print "\nEnergy detector info:"
     print "\tObservation interval:\t%.02f" %( args.observationInterval )
     print "\tFilter signal:\t\t%s" %( "Yes" if( args.filter ) else "No" )
 
     if( args.filter ):
       print "\nFilter info:"
-      print "\tFirst stopband:\t\t%.02f" %( args.firstStopBand )
-      print "\tFirst passband:\t\t%.02f" %( args.firstPassBand )
-      print "\tSecond passband:\t%.02f" %( args.secondPassBand )
-      print "\tSecond stopband:\t%.02f" %( args.secondStopBand )
+      print "\tFirst stopband:\t\t%.02f" %( args.widebandFirstStopband )
+      print "\tFirst passband:\t\t%.02f" %( args.widebandFirstPassband )
+      print "\tSecond passband:\t%.02f" %( args.widebandSecondPassband )
+      print "\tSecond stopband:\t%.02f" %( args.widebandSecondStopband )
       print "\tPassband attenuation:\t%.02f" %( args.passbandAttenuation )
       print "\tStopband attenuation:\t%.02f" %( args.stopbandAttenuation )
 
-    if( args.write_output ):
+    if( args.writeOutput ):
       print "\nOutput info:"
       print "\tFile name:\t\t%s" %( args.outputFileName )
 
@@ -751,20 +807,21 @@ def energyDetector():
         args.numberOfChannels,
         args.sampleRate,
         args.observationInterval,
-        args.firstStopBand,
-        args.firstPassBand,
-        args.secondPassBand,
-        args.secondStopBand,
+        args.widebandFirstStopband,
+        args.widebandFirstPassband,
+        args.widebandSecondPassband,
+        args.widebandSecondStopband,
         args.passbandAttenuation,
         args.stopbandAttenuation,
         args.outputFileName,
         args.filter,
-        args.write_output
+        args.writeOutput,
+        args.duration
                      )
 
     if( device and detector ):
       if( device.doesSupportRecording() ):
-        detector.detect( device, args.duration )
+        detector.record( device )
 
         print "Done detecting."
       else:
@@ -775,6 +832,92 @@ def energyDetector():
 
   else:
     print "ERROR: Device name must be set for energy detecting."
+
+def receive():
+  if( args.deviceName ):
+    print "Receiver info:"
+    print "\tDevice:\t\t\t\t%s" %( args.deviceName )
+    print "\tDuration:\t\t\t%d" %( args.duration )
+    print "\tNumber of training symbols:\t%d" %( args.numberOfTrainingSymbols )
+    print "\nFormat info:"
+    print "\tBit depth:\t\t\t%d" %( args.bitDepth )
+    print "\tNumber of channels:\t\t%d" %( args.numberOfChannels )
+    print "\tSample rate:\t\t\t%.02f" %( args.sampleRate )
+    print "\nModulation info:"
+    print "\tBits per symbol:\t\t%d" %( args.bitsPerSymbol )
+    print "\tSamples per symbol:\t\t%d" %( args.samplesPerSymbol )
+    print "\tCarrier frequency:\\tt%.02f" %( args.carrierFrequency )
+    print "\tSample rate:\t\t\t%.02f" %( args.sampleRate )
+    print "\tOutput signal:\t\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
+    print "\nWideband filter info:"
+    print "\tFirst stopband:\t\t\t%.02f" %( args.widebandFirstStopband )
+    print "\tFirst passband:\t\t\t%.02f" %( args.widebandFirstPassband )
+    print "\tSecond passband:\t\t%.02f" %( args.widebandSecondPassband )
+    print "\tSecond stopband:\t\t%.02f" %( args.widebandSecondStopband )
+    print "\nNarrowband filter info:"
+    print "\tFirst stopband:\t\t\t%.02f" %( args.narrowbandFirstStopband )
+    print "\tFirst passband:\t\t\t%.02f" %( args.narrowbandFirstPassband )
+    print "\tSecond passband:\t\t%.02f" %( args.narrowbandSecondPassband )
+    print "\tSecond stopband:\t\t%.02f" %( args.narrowbandSecondStopband )
+    print "\nFilter info:"
+    print "\tPassband attenuation:\t\t%.02f" %( args.passbandAttenuation )
+    print "\tStopband attenuation:\t\t%.02f" %( args.stopbandAttenuation )
+    print "\nSpread spectrum info:"
+    print "\tSamples per chip:\t\t%d" %( args.samplesPerChip )
+    print "\tPolynomial degree:\t\t%d" %( args.polynomialDegree )
+    print "\tFirst generator:\t\t0x%x" %( args.firstGenerator )
+    print "\tSecond generator:\t\t0x%x" %( args.secondGenerator )
+    print "\tFirst initial value:\t\t0x%x" %( args.firstInitialValue )
+    print "\tSecond initial value:\t\t0x%x" %( args.secondInitialValue )
+
+    if( args.writeOutput ):
+      print "\nOutput info:"
+      print "\tFile name:\t\t\t%s" %( args.outputFileName )
+
+    device = findDevice( args.deviceName )
+    receiver =  \
+      Receiver  (
+        args.bitDepth,
+        args.numberOfChannels,
+        args.sampleRate,
+        args.bitsPerSymbol,
+        args.samplesPerSymbol,
+        args.carrierFrequency,
+        args.widebandFirstStopband,
+        args.widebandFirstPassband,
+        args.widebandSecondPassband,
+        args.widebandSecondStopband,
+        args.narrowbandFirstStopband,
+        args.narrowbandFirstPassband,
+        args.narrowbandSecondPassband,
+        args.narrowbandSecondStopband,
+        args.passbandAttenuation,
+        args.stopbandAttenuation,
+        args.polynomialDegree,
+        args.firstGenerator,
+        args.secondGenerator,
+        args.firstInitialValue,
+        args.secondInitialValue,
+        args.samplesPerChip,
+        args.numberOfTrainingSymbols,
+        args.outputFileName,
+        args.writeOutput,
+        args.duration
+                )
+
+    if( device and receiver ):
+      if( device.doesSupportRecording() ):
+        receiver.record( device )
+
+        print "Done receiving."
+      else:
+        print "ERROR: Device '%s' does not support recording."  \
+          %( args.deviceName )
+    else:
+      print "ERROR: Could not find device %s." %( args.deviceName )
+  else:
+    print "ERROR: Device name must be set for energy detecting."
+
 def main():
   startTime = time.time()
 
@@ -804,6 +947,8 @@ def main():
     spreadSpectrumTransmit()
   elif( args.energyDetector ):
     energyDetector()
+  elif( args.receive ):
+    receive()
   else:
     parser.print_help()
 
