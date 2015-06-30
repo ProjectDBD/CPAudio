@@ -13,7 +13,6 @@ class BitStream:
         python_bit_stream_initialize_from_bit_packer( buffer.packer )
 
       self.bitPacker = buffer 
-
   
   def __del__( self ):
     if( self.stream ):

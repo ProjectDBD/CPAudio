@@ -133,22 +133,37 @@ class BaseRecorder:
     while( not done ):
       buffer = None
 
+      nBitsToRead = self.getNumberOfBitsToRead()
+
       BaseRecorder.semaphore.acquire( True )
 
       BaseRecorder.lock.acquire( True )
 
       availableData = self.signal.getSize()
-      nBitsToRead   = self.getNumberOfBitsToRead()
-
-      print "Available %d, waiting for %d." %( availableData, nBitsToRead )
-
-      if( availableData >= nBitsToRead ):
-        buffer = self.signal.read( nBitsToRead )
 
       BaseRecorder.lock.release()
 
-      if( None != buffer ):
-        done = self.processBuffer( buffer )
+      #print "Available %d, waiting for %d." %( availableData, nBitsToRead )
+
+      while( availableData >= nBitsToRead and not done ):
+        BaseRecorder.lock.acquire( True )
+
+        buffer = self.signal.read( nBitsToRead )
+
+        BaseRecorder.lock.release()
+
+        if( None != buffer ):
+          done = self.processBuffer( buffer )
+
+        nBitsToRead = self.getNumberOfBitsToRead()
+
+        BaseRecorder.lock.acquire( True )
+
+        availableData = self.signal.getSize()
+
+        BaseRecorder.lock.release()
+
+        #print "Available %d, waiting for %d." %( availableData, nBitsToRead )
 
   def getNumberOfBitsToRead( self ):
     return( 0 )

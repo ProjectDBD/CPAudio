@@ -6,6 +6,9 @@ from BaseRecorder import BaseRecorder
 
 from ascii_graph import Pyasciigraph
 
+import WAVRecorder
+
+import struct
 import os
 import math
 import wave
@@ -64,6 +67,9 @@ class EnergyDetector( BaseRecorder ):
         for channelIndex in range( self.numberOfChannels - 1 ):
           bufferedSamples.read( self.bitDepth )
 
+        sampleValue = struct.pack( "!I", sampleValue )
+        sampleValue = struct.unpack( "i", sampleValue )[ 0 ]
+
         part.append( sampleValue * 1.0 )
 
       if( 0 < len( part ) ):
@@ -92,9 +98,10 @@ class EnergyDetector( BaseRecorder ):
 
     N         = len( fftMag )
     delta     = 1.0 / self.sampleRate
+
     maxValue  = -1
 
-    for magnitude in fftMag:
+    for magnitude in fftMag[ 1 : len( fftMag ) ]:
       if( magnitude > maxValue ):
         maxValue = magnitude
 
@@ -104,7 +111,7 @@ class EnergyDetector( BaseRecorder ):
     graphLabel  = "Observation FFT (%.02f sec)" %( self.observationInterval )
     dataPoints  = []
 
-    for n in range( int( N / 2 ) ):
+    for n in range( 1, int( N / 2 ) ):
       frequency = n / ( delta * N )
 
       label = "%.02f Hz" %( frequency )
@@ -117,7 +124,7 @@ class EnergyDetector( BaseRecorder ):
           dataPoints.append( ( frequency, fftMag[ n ] ) )
       else:
         dataPoints.append( ( frequency, fftMag[ n ] ) )
-
+    
     dataPoints  = self.decimate( dataPoints )
     graph       = Pyasciigraph()
     plot        = graph.graph( graphLabel, dataPoints )
@@ -163,24 +170,6 @@ class EnergyDetector( BaseRecorder ):
       decimatedPoints.append( ( label, point ) )
 
     return( decimatedPoints )
-
-  def __del__( self ):
-    if( self.writeOutput ):
-      WAVRecorder.saveSignalToWAV ( 
-        self.signal, self.outputFileName, self.numberOfChannels,
-        self.bitDepth, self.sampleRate
-                                  )
-
-    if( self.signal ):
-      self.signal = None
-
-    if( self.widebandFilter ):
-      csignal_destroy_passband_filter( self.widebandFilter )
-
-    EnergyDetector.bitPacker           = None
-    EnergyDetector.lock                = None
-    EnergyDetector.semaphore           = None
-    EnergyDetector.numObservationBits  = None
 
   def determinePlatform( self ):
     platform_info = platform.uname()

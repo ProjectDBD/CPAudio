@@ -67,16 +67,6 @@ def setup():
     help    = 'List the details about a device.'\
                       )
 
-  parser.add_argument (
-    '-sc',
-    '-synchronizationChips',
-    action  = 'store',
-    default = 4 * ( 2 ** 7 - 1 ),
-    type    = int,
-    dest    = 'synchronizationChips',
-    help    = 'The number of synchronization chips to transmit.'
-                      )
-
   parser.add_argument (                 \
     '-p',                               \
     '--playback',                       \
@@ -539,34 +529,34 @@ def playback():
 def spreadSpectrumTransmit():
   if( args.deviceName ):
     print "Transmit info:"
-    print "\tDevice:\t\t\t%s" %( args.deviceName )
-    print "\tOutput signal:\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
+    print "\tDevice:\t\t\t\t%s" %( args.deviceName )
+    print "\tOutput signal:\t\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
+    print "\tNumber of training symbols:\t%d" %( args.numberOfTrainingSymbols )
     print "\nFormat info:"
-    print "\tBit depth:\t\t%d" %( args.bitDepth )
-    print "\tNumber of channels:\t%d" %( args.numberOfChannels )
-    print "\tSample rate:\t\t%.02f" %( args.sampleRate )
+    print "\tBit depth:\t\t\t%d" %( args.bitDepth )
+    print "\tNumber of channels:\t\t%d" %( args.numberOfChannels )
+    print "\tSample rate:\t\t\t%.02f" %( args.sampleRate )
     print "\nModulation info:"
-    print "\tBits per symbol:\t%d" %( args.bitsPerSymbol )
-    print "\tSamples per symbol:\t%d" %( args.samplesPerSymbol )
-    print "\tCarrier frequency:\t%.02f" %( args.carrierFrequency )
-    print "\tSynchronization chips:\t%d" %( args.synchronizationChips )
+    print "\tBits per symbol:\t\t%d" %( args.bitsPerSymbol )
+    print "\tSamples per symbol:\t\t%d" %( args.samplesPerSymbol )
+    print "\tCarrier frequency:\t\t%.02f" %( args.carrierFrequency )
 
     if( args.filter ):
       print "\nFilter info:"
-      print "\tFirst stopband:\t\t%.02f" %( args.widebandFirstStopband )
-      print "\tFirst passband:\t\t%.02f" %( args.widebandFirstPassband )
-      print "\tSecond passband:\t%.02f" %( args.widebandSecondPassband )
-      print "\tSecond stopband:\t%.02f" %( args.widebandSecondStopband )
-      print "\tPassband attenuation:\t%.02f" %( args.passbandAttenuation )
-      print "\tStopband attenuation:\t%.02f" %( args.stopbandAttenuation )
+      print "\tFirst stopband:\t\t\t%.02f" %( args.widebandFirstStopband )
+      print "\tFirst passband:\t\t\t%.02f" %( args.widebandFirstPassband )
+      print "\tSecond passband:\t\t%.02f" %( args.widebandSecondPassband )
+      print "\tSecond stopband:\t\t%.02f" %( args.widebandSecondStopband )
+      print "\tPassband attenuation:\t\t%.02f" %( args.passbandAttenuation )
+      print "\tStopband attenuation:\t\t%.02f" %( args.stopbandAttenuation )
 
     print "\nSpread spectrum info:"
-    print "\tSamples per chip:\t%d" %( args.samplesPerChip )
-    print "\tPolynomial degree:\t%d" %( args.polynomialDegree )
-    print "\tFirst generator:\t0x%x" %( args.firstGenerator )
-    print "\tSecond generator:\t0x%x" %( args.secondGenerator )
-    print "\tFirst initial value:\t0x%x" %( args.firstInitialValue )
-    print "\tSecond initial value:\t0x%x" %( args.secondInitialValue )
+    print "\tSamples per chip:\t\t%d" %( args.samplesPerChip )
+    print "\tPolynomial degree:\t\t%d" %( args.polynomialDegree )
+    print "\tFirst generator:\t\t0x%x" %( args.firstGenerator )
+    print "\tSecond generator:\t\t0x%x" %( args.secondGenerator )
+    print "\tFirst initial value:\t\t0x%x" %( args.firstInitialValue )
+    print "\tSecond initial value:\t\t0x%x" %( args.secondInitialValue )
 
     device = findDevice( args.deviceName )
 
@@ -599,21 +589,15 @@ def spreadSpectrumTransmit():
 
         mesage = ''
 
-        if( args.synchronizationChips ):
-          numChipSamples            = \
-            args.synchronizationChips * args.samplesPerChip
-          numSynchronizationSymbols = \
-            math.ceil( numChipSamples * 1.0 / args.samplesPerSymbol * 1.0 )
+        if( args.numberOfTrainingSymbols ):
           numSymbolsPerByte         = 8 / args.bitsPerSymbol
           numBytes                  = \
             int (
               math.ceil (
-                numSynchronizationSymbols * 1.0 / numSymbolsPerByte * 1.0
+                args.numberOfTrainingSymbols * 1.0 / numSymbolsPerByte * 1.0
                         )
                 )
         
-          print "Chip Sample: %d" %( numChipSamples )
-          print "Synchronization symbols: %d" %( numSynchronizationSymbols )
           print "Symbols per Byte: %d" %( numSymbolsPerByte )
           print "Bytes: %d" %( numBytes )
 
@@ -623,11 +607,11 @@ def spreadSpectrumTransmit():
           message = message + args.message
 
         print "\nMessage info:"
-        print "\tMessage:\t\t%s" \
+        print "\tMessage:\t\t\t%s" \
           %( args.message if( args.message ) else '(None)' )
-        print "\tMessage length:\t\t%d" \
+        print "\tMessage length:\t\t\t%d" \
           %( len( args.message ) if( args.message ) else 0 )
-        print "\tPadded message length:\t%d" %( len( message ) )
+        print "\tPadded message length:\t\t%d" %( len( message ) )
 
         transmitter.transmit( device, message )
       else:
@@ -846,7 +830,7 @@ def receive():
     print "\nModulation info:"
     print "\tBits per symbol:\t\t%d" %( args.bitsPerSymbol )
     print "\tSamples per symbol:\t\t%d" %( args.samplesPerSymbol )
-    print "\tCarrier frequency:\\tt%.02f" %( args.carrierFrequency )
+    print "\tCarrier frequency:\t\t%.02f" %( args.carrierFrequency )
     print "\tSample rate:\t\t\t%.02f" %( args.sampleRate )
     print "\tOutput signal:\t\t\t%s" %( "Yes" if( args.writeOutput ) else "No" )
     print "\nWideband filter info:"

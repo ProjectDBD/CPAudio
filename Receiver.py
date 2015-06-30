@@ -44,6 +44,9 @@ class Receiver( BaseRecorder ):
     self.constellationSize        = 2 ** bitsPerSymbol
     self.basebandAmplitude        = 2 ** ( self.bitDepth - 1 ) - 1
 
+    testsPerChip                  = 1
+    self.decimationFactor         = int( self.samplesPerChip / testsPerChip )
+
     self.inphaseCode              = \
       python_initialize_gold_code (
         polynomialDegree, firstGenerator, secondGenerator,
@@ -65,10 +68,11 @@ class Receiver( BaseRecorder ):
     self.maxNumberOfObservations  = \
       math.ceil (
         ( duration * self.sampleRate )
-        / ( ( self.numObservationBits * 1.0 ) / 8.0 )
+        / (
+            self.samplesPerSymbol * self.numberOfTrainingSymbols
+            * Receiver.MULTIPLIER
+          )
                 )
-
-    print "Max number of observations: %d." %( self.maxNumberOfObservations )
 
     self.numProcessedObservations = 0
 
@@ -84,14 +88,10 @@ class Receiver( BaseRecorder ):
                                       )   
 
   def getNumberOfBitsToRead( self ):
-    print "Number of observation bits is %d." %( self.numObservationBits )
-
     return( self.numObservationBits )
 
   def processBuffer( self, buffer ):
     done = False
-
-    print "Processing buffer, length is %d." %( len( buffer ) )
 
     if( len( buffer ) * 8 < self.numObservationBits ):
       print "ERROR: Received an incomplete buffer (%d), expexting (%d)" \
@@ -99,13 +99,48 @@ class Receiver( BaseRecorder ):
 
       done = True
     else:
-      self.numProcessedObservations += 1
+      part            = []
+      bufferedSamples = BitStream( buffer )
 
-      print "nProcessed=%d." %( self.numProcessedObservations )
+      numObservationSamples = len( self.spreadingCode ) * Receiver.MULTIPLIER
+
+      for sampleIndex in range( numObservationSamples ):
+        sampleValue = bufferedSamples.read( self.bitDepth )            
+
+        for channelIndex in range( self.numberOfChannels - 1 ):
+          bufferedSamples.read( self.bitDepth )
+
+        sampleValue = struct.pack( "!I", sampleValue )
+        sampleValue = struct.unpack( "i", sampleValue )[ 0 ]
+
+        part.append( sampleValue * 1.0 )
+
+      if( part != None and 0 < len( part ) ):
+        self.detectTrainingSequence( part )
+
+      self.numProcessedObservations += 1
 
       done = ( self.numProcessedObservations >= self.maxNumberOfObservations )
 
     return( done )
+
+  def detectTrainingSequence( self, signal ):
+    thresholds =  \
+      python_csignal_calculate_thresholds ( 
+        self.spreadingCode,
+        self.widebandFilter,
+        self.narrowbandFilter,
+        signal,
+        self.decimationFactor
+                                          )
+
+    max = 0
+
+    for threshold in thresholds:
+      if( threshold > max ):
+        max = threshold
+
+    print "Max threshold is %.04f dB" %( 10 * math.log10( max ) )
 
   def initializeReferenceSpreadingCode( self ):
     nBytes = \
@@ -122,11 +157,12 @@ class Receiver( BaseRecorder ):
     ( numberOfBits, buffer ) = \
       python_bit_stream_get_bits( tracker, self.bitsPerSymbol ) 
 
-    symbol = struct.unpack( "B", buffer )[ 0 ]
+    nSymbols  = 0
+    symbol    = struct.unpack( "B", buffer )[ 0 ]
 
     self.spreadingCode = []
 
-    while( symbol != None ):
+    while( symbol != None and nSymbols < self.numberOfTrainingSymbols ):
       components = python_modulate_symbol (
           symbol,
           self.constellationSize,
@@ -140,7 +176,7 @@ class Receiver( BaseRecorder ):
           self.inphaseCode,
           self.samplesPerChip,
           components[ 0 ]
-                                          )
+                               )
 
       Q = python_spread_signal  (
           self.quadratureCode,
@@ -164,3 +200,5 @@ class Receiver( BaseRecorder ):
         symbol = None
       else:
         symbol = struct.unpack( "B", buffer )[ 0 ] 
+
+      nSymbols += 1

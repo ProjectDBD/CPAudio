@@ -52,8 +52,6 @@ class SpreadSpectrumTransmitter( FilterTransmitter ):
     print "Number of symbols: %d" %( numberOfSymbols )
 
     while( symbol != None and numberOfSymbols > 0 ):
-      print "Symbol: %d" %( symbol )
-
       signalComponents =  \
         python_modulate_symbol  (
           symbol,
